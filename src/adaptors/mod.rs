@@ -262,6 +262,85 @@ impl<I> Iterator for PutBack<I>
     }
 }
 
+#[must_use = "iterator adaptors are lazy and do nothing unless consumed"]
+pub struct MultiProduct<I>
+    where I: Iterator + Clone,
+          I::Item: Clone
+{
+    cur: Option<Vec<Option<I::Item>>>,
+    iters: Vec<I>,
+    iters_orig: Vec<I>,
+}
+
+impl<I> MultiProduct<I>
+    where I: Iterator + Clone,
+          I::Item: Clone
+{
+    fn cascade(&mut self, i: usize) -> bool {
+        if let Some(ref mut cur) = self.cur {
+            if let Some(_) = cur[i] {
+                true
+            } else {
+                if (i == 0) | self.cascade(i - 1) {
+                    self.iters[i] = self.iters_orig[i].clone();
+                    if let Some(next_elm) = self.iters[i].next() {
+                        cur[i] = Some(next_elm);
+                        true
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                }
+            }
+        } else { panic!() }
+    }
+
+    fn iterate(&mut self) -> bool {
+        if self.iters.is_empty() {
+            return false;
+        }
+
+        if let Some(ref mut cur) = self.cur {
+            *cur.last_mut().unwrap() = self.iters.last_mut().unwrap().next();
+        } else {
+            self.cur = Some(vec![None; self.iters.len()]);
+        }
+
+        let count = self.iters.len();
+
+        self.cascade(count)
+    }
+}
+
+impl<I> Iterator for MultiProduct<I>
+    where I: Iterator + Clone,
+          I::Item: Clone
+{
+    type Item = Vec<I::Item>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.iterate() {
+            if let Some(cur) = self.cur {
+                Some(cur.clone().into_iter().map(Option::unwrap).collect())
+            } else { panic!() }
+        } else {
+            None
+        }
+    }
+}
+
+pub fn multi_cartesian_product<I>(iters: Vec<I>) -> MultiProduct<I>
+    where I: Iterator + Clone,
+          I::Item: Clone
+{
+    MultiProduct {
+        cur: None,
+        iters: iters.clone(),
+        iters_orig: iters
+    }
+}
+
 #[derive(Debug, Clone)]
 /// An iterator adaptor that iterates over the cartesian product of
 /// the element sets of two iterators `I` and `J`.
