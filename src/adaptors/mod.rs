@@ -276,21 +276,29 @@ impl<I> MultiProduct<I>
     where I: Iterator + Clone,
           I::Item: Clone
 {
-    fn cascade(&mut self, i: usize) -> bool {
+    fn cascade(mut self, i: usize) -> (bool, Self) {
         if let Some(ref mut cur) = self.cur {
             if let Some(_) = cur[i] {
-                true
+                (true, self)
             } else {
-                if (i == 0) | self.cascade(i - 1) {
+                if {
+                    if i == 0 {
+                        true
+                    } else {
+                        let (cascade_result, _self) = self.cascade(i - 1);
+                        self = _self;
+                        cascade_result
+                    }
+                } {
                     self.iters[i] = self.iters_orig[i].clone();
                     if let Some(next_elm) = self.iters[i].next() {
                         cur[i] = Some(next_elm);
-                        true
+                        (true, self)
                     } else {
-                        false
+                        (false, self)
                     }
                 } else {
-                    false
+                    (false, self)
                 }
             }
         } else { panic!() }
@@ -309,7 +317,10 @@ impl<I> MultiProduct<I>
 
         let count = self.iters.len();
 
-        self.cascade(count)
+        let (unfinished, _self) = self.cascade(count);
+        *self = _self;
+
+        unfinished
     }
 }
 
@@ -321,7 +332,7 @@ impl<I> Iterator for MultiProduct<I>
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.iterate() {
-            if let Some(cur) = self.cur {
+            if let Some(ref cur) = self.cur {
                 Some(cur.clone().into_iter().map(Option::unwrap).collect())
             } else { panic!() }
         } else {
