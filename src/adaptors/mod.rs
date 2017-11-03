@@ -262,8 +262,124 @@ impl<I> Iterator for PutBack<I>
     }
 }
 
+impl<I> MultiProductIter<I>
+    where I: Iterator + Clone,
+          I::Item: Clone
+{
+    fn new(iter: I) -> Self {
+        Self {
+            cur: None,
+            iter: iter.clone(),
+            iter_orig: iter
+        }
+    }
+
+    fn iterate(&mut self) {
+        self.cur = self.iter.next();
+    }
+}
+
+pub struct MultiProductIter<I>
+    where I: Iterator + Clone,
+          I::Item: Clone
+{
+    cur: Option<I::Item>,
+    iter: I,
+    iter_orig: I,
+}
+
+pub enum MultiProduct<I>
+    where I: Iterator + Clone,
+          I::Item: Clone
+{
+    Ready(Option<Vec<I>>),
+    Started(Option<Vec<MultiProductIter<I>>>),
+}
+
+impl<I> MultiProduct<I>
+    where I: Iterator + Clone,
+          I::Item: Clone
+{
+    fn cascade(iters: Option<(
+        &mut MultiProductIter<I>,
+        &mut [MultiProductIter<I>])>
+    ) -> bool {
+        if let Some((last, rest)) = iters {
+            if last.cur.is_some() {
+                true
+            } else if MultiProduct::cascade(rest.split_last_mut()) {
+                last.iter = last.iter_orig.clone();
+                last.cur = last.iter.next();
+                // If iterator is None twice consecutively, then iterator is
+                // empty; whole product is empty.
+                last.cur.is_some()
+            } else { false }
+        } else { true }
+    }
+}
+
+impl<I> Iterator for MultiProduct<I>
+    where I: Iterator + Clone,
+          I::Item: Clone
+{
+    type Item = Vec<I::Item>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        use self::MultiProduct::*;
+
+        *self = match *self {
+            Ready(ref mut iters) => {
+                // Give cheap temp value to `iters` to satisfy borrow checker
+                let _iters = replace(iters, Vec::new());
+                let mut multi_iters: Vec<MultiProductIter<I>> = _iters.into_iter().map(|iter|
+                    MultiProductIter {
+                        cur: None,
+                        iter: iter.clone(),
+                        iter_orig: iter
+                    }
+                ).collect();
+                MultiProduct::cascade(multi_iters.split_last_mut());
+                Started(multi_iters)
+            },
+            Started(ref mut multi_iters) => {
+                if let Some(multi_iter) = multi_iters.last_mut() {
+                    multi_iter.cur = multi_iter.iter.next();
+                }
+                MultiProduct::cascade(multi_iters.split_last_mut());
+                Started(multi_iters)
+            }
+        };
+        // let mut multi_iters: Vec<MultiProductIter<I>> = match self {
+        //     &mut MultiProduct::Ready(ref mut iters) => {
+        //         // Give cheap temp value to `iters` to satisfy borrow checker
+        //         let _iters = replace(iters, Vec::new());
+        //         _iters.into_iter().map(MultiProductIter::new).collect()
+        //     },
+        //     &mut MultiProduct::Started(mut multi_iters) => {
+        //         // if let Some(multi_iter) = multi_iters.last_mut() {
+        //         //     multi_iter.cur = multi_iter.iter.next();
+        //         // }
+        //         *self = MultiProduct::Ready(Vec::new());
+        //         let lowest_iter = multi_iters.last_mut().unwrap();
+        //         lowest_iter.iterate();
+        //         multi_iters
+        //     }
+        // };
+        // MultiProduct::cascade(multi_iters.split_last_mut());
+        // Started(multi_iters)
+        None
+    }
+}
+
+pub fn multi_cartesian_product<I>(iters: Vec<I>) -> MultiProduct<I>
+    where I: Iterator + Clone,
+          I::Item: Clone
+{
+    MultiProduct::Ready(iters)
+}
+
 #[must_use = "iterator adaptors are lazy and do nothing unless consumed"]
-pub struct MultiProduct<I>
+pub struct _MultiProduct<I>
     where I: Iterator + Clone,
           I::Item: Clone
 {
@@ -272,7 +388,7 @@ pub struct MultiProduct<I>
     iters_orig: Vec<I>,
 }
 
-impl<I> MultiProduct<I>
+impl<I> _MultiProduct<I>
     where I: Iterator + Clone,
           I::Item: Clone
 {
@@ -313,7 +429,7 @@ impl<I> MultiProduct<I>
     }
 }
 
-impl<I> Iterator for MultiProduct<I>
+impl<I> Iterator for _MultiProduct<I>
     where I: Iterator + Clone,
           I::Item: Clone
 {
@@ -330,11 +446,11 @@ impl<I> Iterator for MultiProduct<I>
     }
 }
 
-pub fn multi_cartesian_product<I>(iters: Vec<I>) -> MultiProduct<I>
+pub fn _multi_cartesian_product<I>(iters: Vec<I>) -> _MultiProduct<I>
     where I: Iterator + Clone,
           I::Item: Clone
 {
-    MultiProduct {
+    _MultiProduct {
         cur: None,
         iters: iters.clone(),
         iters_orig: iters
