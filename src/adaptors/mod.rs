@@ -293,21 +293,18 @@ pub enum MultiProduct<I>
           I::Item: Clone
 {
     Ready(Option<Vec<I>>),
-    Started(Option<Vec<MultiProductIter<I>>>),
+    Started(Option<Vec<MultiProductIter<I>>>)
 }
 
 impl<I> MultiProduct<I>
     where I: Iterator + Clone,
           I::Item: Clone
 {
-    fn cascade(iters: Option<(
-        &mut MultiProductIter<I>,
-        &mut [MultiProductIter<I>])>
-    ) -> bool {
-        if let Some((last, rest)) = iters {
+    fn cascade(multi_iters: &mut [MultiProductIter<I>]) -> bool {
+        if let Some((last, rest)) = multi_iters.split_last_mut()  {
             if last.cur.is_some() {
                 true
-            } else if MultiProduct::cascade(rest.split_last_mut()) {
+            } else if MultiProduct::cascade(rest) {
                 last.iter = last.iter_orig.clone();
                 last.cur = last.iter.next();
                 // If iterator is None twice consecutively, then iterator is
@@ -315,6 +312,14 @@ impl<I> MultiProduct<I>
                 last.cur.is_some()
             } else { false }
         } else { true }
+    }
+
+    fn curr_iterator(&self) -> Vec<I::Item> {
+        if let &MultiProduct::Started(Some(ref multi_iters)) = self {
+            multi_iters.iter().map(|multi_iter| {
+                multi_iter.cur.as_ref().unwrap().clone()
+            }).collect()
+        } else { panic!() }
     }
 }
 
@@ -327,47 +332,28 @@ impl<I> Iterator for MultiProduct<I>
     fn next(&mut self) -> Option<Self::Item> {
         use self::MultiProduct::*;
 
-        *self = match *self {
+
+        let mut multi_iters = match *self {
             Ready(ref mut iters) => {
-                // Give cheap temp value to `iters` to satisfy borrow checker
-                let _iters = replace(iters, Vec::new());
-                let mut multi_iters: Vec<MultiProductIter<I>> = _iters.into_iter().map(|iter|
-                    MultiProductIter {
-                        cur: None,
-                        iter: iter.clone(),
-                        iter_orig: iter
-                    }
-                ).collect();
-                MultiProduct::cascade(multi_iters.split_last_mut());
-                Started(multi_iters)
+                let _iters = iters.take().unwrap();
+                _iters.into_iter().map(MultiProductIter::new).collect()
             },
             Started(ref mut multi_iters) => {
-                if let Some(multi_iter) = multi_iters.last_mut() {
-                    multi_iter.cur = multi_iter.iter.next();
+                let mut _multi_iters = multi_iters.take().unwrap();
+                {
+                    let last_iter = _multi_iters.last_mut().unwrap();
+                    last_iter.iterate();
                 }
-                MultiProduct::cascade(multi_iters.split_last_mut());
-                Started(multi_iters)
-            }
+                _multi_iters
+            },
         };
-        // let mut multi_iters: Vec<MultiProductIter<I>> = match self {
-        //     &mut MultiProduct::Ready(ref mut iters) => {
-        //         // Give cheap temp value to `iters` to satisfy borrow checker
-        //         let _iters = replace(iters, Vec::new());
-        //         _iters.into_iter().map(MultiProductIter::new).collect()
-        //     },
-        //     &mut MultiProduct::Started(mut multi_iters) => {
-        //         // if let Some(multi_iter) = multi_iters.last_mut() {
-        //         //     multi_iter.cur = multi_iter.iter.next();
-        //         // }
-        //         *self = MultiProduct::Ready(Vec::new());
-        //         let lowest_iter = multi_iters.last_mut().unwrap();
-        //         lowest_iter.iterate();
-        //         multi_iters
-        //     }
-        // };
-        // MultiProduct::cascade(multi_iters.split_last_mut());
-        // Started(multi_iters)
-        None
+
+        if !MultiProduct::cascade(&mut multi_iters) {
+            None
+        } else {
+            *self = Started(Some(multi_iters));
+            Some(self.curr_iterator())
+        }
     }
 }
 
@@ -375,86 +361,7 @@ pub fn multi_cartesian_product<I>(iters: Vec<I>) -> MultiProduct<I>
     where I: Iterator + Clone,
           I::Item: Clone
 {
-    MultiProduct::Ready(iters)
-}
-
-#[must_use = "iterator adaptors are lazy and do nothing unless consumed"]
-pub struct _MultiProduct<I>
-    where I: Iterator + Clone,
-          I::Item: Clone
-{
-    cur: Option<Vec<Option<I::Item>>>,
-    iters: Vec<I>,
-    iters_orig: Vec<I>,
-}
-
-impl<I> _MultiProduct<I>
-    where I: Iterator + Clone,
-          I::Item: Clone
-{
-    fn cascade(&mut self, i: usize) -> bool {
-        if let Some(ref mut cur) = self.cur {
-            if let Some(_) = cur[i] {
-                true
-            } else {
-                if (i == 0) | self.cascade(i - 1) {
-                    self.iters[i] = self.iters_orig[i].clone();
-                    if let Some(next_elm) = self.iters[i].next() {
-                        cur[i] = Some(next_elm);
-                        true
-                    } else {
-                        false
-                    }
-                } else {
-                    false
-                }
-            }
-        } else { panic!() }
-    }
-
-    fn iterate(&mut self) -> bool {
-        if self.iters.is_empty() {
-            return false;
-        }
-
-        if let Some(ref mut cur) = self.cur {
-            *cur.last_mut().unwrap() = self.iters.last_mut().unwrap().next();
-        } else {
-            self.cur = Some(vec![None; self.iters.len()]);
-        }
-
-        let count = self.iters.len();
-
-        self.cascade(count)
-    }
-}
-
-impl<I> Iterator for _MultiProduct<I>
-    where I: Iterator + Clone,
-          I::Item: Clone
-{
-    type Item = Vec<I::Item>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.iterate() {
-            if let Some(cur) = self.cur {
-                Some(cur.clone().into_iter().map(Option::unwrap).collect())
-            } else { panic!() }
-        } else {
-            None
-        }
-    }
-}
-
-pub fn _multi_cartesian_product<I>(iters: Vec<I>) -> _MultiProduct<I>
-    where I: Iterator + Clone,
-          I::Item: Clone
-{
-    _MultiProduct {
-        cur: None,
-        iters: iters.clone(),
-        iters_orig: iters
-    }
+    MultiProduct::Ready(Some(iters))
 }
 
 #[derive(Debug, Clone)]
