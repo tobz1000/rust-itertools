@@ -262,7 +262,16 @@ impl<I> Iterator for PutBack<I>
     }
 }
 
-impl<I> MultiProductIter<I>
+pub struct _MultiProductIter<I>
+    where I: Iterator + Clone,
+          I::Item: Clone
+{
+    cur: Option<I::Item>,
+    iter: I,
+    iter_orig: I,
+}
+
+impl<I> _MultiProductIter<I>
     where I: Iterator + Clone,
           I::Item: Clone
 {
@@ -275,16 +284,7 @@ impl<I> MultiProductIter<I>
     }
 }
 
-pub struct MultiProductIter<I>
-    where I: Iterator + Clone,
-          I::Item: Clone
-{
-    cur: Option<I::Item>,
-    iter: I,
-    iter_orig: I,
-}
-
-pub enum MultiProduct<I>
+pub enum _MultiProduct<I>
     where I: Iterator + Clone,
           I::Item: Clone
 {
@@ -292,7 +292,7 @@ pub enum MultiProduct<I>
     Started(Option<Vec<MultiProductIter<I>>>)
 }
 
-impl<I> MultiProduct<I>
+impl<I> _MultiProduct<I>
     where I: Iterator + Clone,
           I::Item: Clone
 {
@@ -327,7 +327,7 @@ impl<I> MultiProduct<I>
     }
 }
 
-impl<I> Iterator for MultiProduct<I>
+impl<I> Iterator for _MultiProduct<I>
     where I: Iterator + Clone,
           I::Item: Clone
 {
@@ -365,9 +365,21 @@ impl<I> Iterator for MultiProduct<I>
     }
 }
 
+/// ```rust,ignore
+/// let product = self::multi_cartesian_product(vec![[1,2,3],[4,5,6],[7,8,9]]);
+/// let product_vec: Vec<Vec<i32>> = product.collect();
+/// assert_eq!(product_vec[0], vec![1,4,7]);
+/// ```
+pub fn _multi_cartesian_product<I>(iters: Vec<I>) -> MultiProduct<I>
+    where I: Iterator + Clone,
+          I::Item: Clone
+{
+    MultiProduct::Ready(Some(iters))
+}
+
 #[test]
 fn thing() {
-    let product = self::multi_cartesian_product(vec![1..4, 4..7, 7..10]);
+    let product = self::multi_cartesian_product(vec![1..4, 4..7, 7..10, 10..13]);
     let mut i = 0;
     for p in product {
         i += 1;
@@ -380,6 +392,30 @@ fn thing() {
     // assert_eq!(product_vec[0], vec![1,4,7]);
 }
 
+pub struct MultiProductIter<I>
+    where I: Iterator + Clone,
+          I::Item: Clone
+{
+    cur: Option<I::Item>,
+    iter: I,
+    iter_orig: I,
+}
+
+impl<I> MultiProductIter<I>
+    where I: Iterator + Clone,
+          I::Item: Clone
+{
+    fn new(iter: I) -> Self {
+        Self {
+            cur: None,
+            iter: iter.clone(),
+            iter_orig: iter
+        }
+    }
+}
+
+type MultiProduct<I> = Vec<MultiProductIter<I>>;
+
 /// ```rust,ignore
 /// let product = self::multi_cartesian_product(vec![[1,2,3],[4,5,6],[7,8,9]]);
 /// let product_vec: Vec<Vec<i32>> = product.collect();
@@ -389,7 +425,7 @@ pub fn multi_cartesian_product<I>(iters: Vec<I>) -> MultiProduct<I>
     where I: Iterator + Clone,
           I::Item: Clone
 {
-    MultiProduct::Ready(Some(iters))
+    iters.into_iter().map(MultiProductIter::new).collect()
 }
 
 #[derive(Debug, Clone)]
