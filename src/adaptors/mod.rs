@@ -273,10 +273,6 @@ impl<I> MultiProductIter<I>
             iter_orig: iter
         }
     }
-
-    fn iterate(&mut self) {
-        self.cur = self.iter.next();
-    }
 }
 
 pub struct MultiProductIter<I>
@@ -300,18 +296,26 @@ impl<I> MultiProduct<I>
     where I: Iterator + Clone,
           I::Item: Clone
 {
-    fn cascade(multi_iters: &mut [MultiProductIter<I>]) -> bool {
+    fn cascade(multi_iters: &mut [MultiProductIter<I>], iterate: bool) -> bool {
         if let Some((last, rest)) = multi_iters.split_last_mut()  {
+            if iterate {
+                last.cur = last.iter.next();
+            }
+
             if last.cur.is_some() {
                 true
-            } else if MultiProduct::cascade(rest) {
+            } else if MultiProduct::cascade(rest, iterate) {
                 last.iter = last.iter_orig.clone();
                 last.cur = last.iter.next();
                 // If iterator is None twice consecutively, then iterator is
                 // empty; whole product is empty.
                 last.cur.is_some()
             } else { false }
-        } else { true }
+        } else {
+            // Reached end of iterator list. On initialisation, return true.
+            // At end of iteration (final iterator finishes), finish.
+            !iterate
+        }
     }
 
     fn curr_iterator(&self) -> Vec<I::Item> {
@@ -331,32 +335,56 @@ impl<I> Iterator for MultiProduct<I>
 
     fn next(&mut self) -> Option<Self::Item> {
         use self::MultiProduct::*;
+        let iterate: bool;
+        let ongoing: bool;
 
-
-        let mut multi_iters = match *self {
+        *self = match *self {
             Ready(ref mut iters) => {
+                iterate = false;
                 let _iters = iters.take().unwrap();
-                _iters.into_iter().map(MultiProductIter::new).collect()
+
+                Started(Some(
+                    _iters.into_iter().map(MultiProductIter::new).collect()
+                ))
             },
             Started(ref mut multi_iters) => {
-                let mut _multi_iters = multi_iters.take().unwrap();
-                {
-                    let last_iter = _multi_iters.last_mut().unwrap();
-                    last_iter.iterate();
-                }
-                _multi_iters
+                iterate = true;
+                Started(multi_iters.take())
             },
         };
 
-        if !MultiProduct::cascade(&mut multi_iters) {
-            None
-        } else {
-            *self = Started(Some(multi_iters));
+        if let &mut Started(Some(ref mut multi_iters)) = self {
+            ongoing = MultiProduct::cascade(multi_iters, iterate);
+        } else { panic!() }
+
+        if ongoing {
             Some(self.curr_iterator())
+        } else {
+            None
         }
     }
 }
 
+#[test]
+fn thing() {
+    let product = self::multi_cartesian_product(vec![1..4, 4..7, 7..10]);
+    let mut i = 0;
+    for p in product {
+        i += 1;
+        if i > 100 {
+            break;
+        }
+        println!("{:?}", p);
+    }
+    // let product_vec: Vec<Vec<i32>> = product.collect();
+    // assert_eq!(product_vec[0], vec![1,4,7]);
+}
+
+/// ```rust,ignore
+/// let product = self::multi_cartesian_product(vec![[1,2,3],[4,5,6],[7,8,9]]);
+/// let product_vec: Vec<Vec<i32>> = product.collect();
+/// assert_eq!(product_vec[0], vec![1,4,7]);
+/// ```
 pub fn multi_cartesian_product<I>(iters: Vec<I>) -> MultiProduct<I>
     where I: Iterator + Clone,
           I::Item: Clone
