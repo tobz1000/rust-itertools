@@ -412,9 +412,90 @@ impl<I> MultiProductIter<I>
             iter_orig: iter
         }
     }
+
+    fn iterate(&self) {
+        self.cur = self.iter.next();
+    }
+
+    fn reset(&self) {
+        self.iter = self.iter_orig.clone();
+    }
+
+    fn in_progress(&self) -> bool {
+        self.cur.is_some()
+    }
 }
 
 type MultiProduct<I> = Vec<MultiProductIter<I>>;
+
+enum MultiProductIterState {
+    StartOfIter,
+    MidIter { on_first_iter: bool },
+}
+
+impl<I> MultiProduct<I>
+    where I: Iterator + Clone,
+          I::Item: Clone
+{
+    fn cascade(
+        multi_iters: &mut [MultiProductIter<I>],
+        state: MultiProductIterState
+    ) -> bool {
+        use self::MultiProductIterState::*;
+
+        if let Some((last, rest)) = multi_iters.split_last_mut() {
+            // TODO review this
+            let on_first_iter = match state {
+                StartOfIter => {
+                    let on_first_iter = !last.in_progress();
+                    state = MidIter { on_first_iter };
+                    on_first_iter
+                },
+                MidIter { on_first_iter } => on_first_iter
+            };
+
+            if !on_first_iter {
+                last.iterate();
+            }
+
+            if last.cur.is_some() {
+                return true;
+            } else if MultiProduct::cascade(rest, state) {
+                last.reset();
+                last.iterate();
+                // If iterator is None twice consecutively, then iterator is
+                // empty; whole product is empty.
+                last.in_progress()
+            } else { return false; }
+        } else {
+            // Reached end of iterator list. On initialisation, return true.
+            // At end of iteration (final iterator finishes), finish.
+            return match state {
+                StartOfIter => false,
+                MidIter { on_first_iter } => on_first_iter
+            };
+        }
+    }
+
+    fn curr_iterator(&self) -> Vec<I::Item> {
+        self.iter().map(|multi_iter| {
+            multi_iter.cur.as_ref().unwrap().clone()
+        }).collect()
+    }
+}
+
+impl<I> Iterator for MultiProduct<I>
+    where I: Iterator + Clone,
+          I::Item: Clone
+{
+    type Item = Vec<I::Item>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        use self::MultiProduct::*;
+
+
+    }
+}
 
 /// ```rust,ignore
 /// let product = self::multi_cartesian_product(vec![[1,2,3],[4,5,6],[7,8,9]]);
