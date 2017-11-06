@@ -264,7 +264,7 @@ impl<I> Iterator for PutBack<I>
 
 #[test]
 fn thing() {
-    let mut product = self::multi_cartesian_product(vec![1..4, 4..7, 7..10, 10..13]);
+    let mut product = self::multi_cartesian_product(vec![1..4, 4..7, 7..10, 10..13].into_iter());
     let mut i = 0;
     for p in product {
         i += 1;
@@ -273,9 +273,20 @@ fn thing() {
         }
         println!("{:?}", p);
     }
-    // let product_vec: Vec<Vec<i32>> = product.collect();
-    // assert_eq!(product_vec[0], vec![1,4,7]);
 }
+
+pub fn multi_cartesian_product<I>(iters: I) -> MultiProduct<I::Item>
+    where I: Iterator,
+          I::Item: Iterator + Clone,
+          <I::Item as Iterator>::Item: Clone
+{
+    MultiProduct(iters.map(MultiProductIter::new).collect())
+}
+
+
+pub struct MultiProduct<I>(Vec<MultiProductIter<I>>)
+    where I: Iterator + Clone,
+          I::Item: Clone;
 
 pub struct MultiProductIter<I>
     where I: Iterator + Clone,
@@ -285,35 +296,6 @@ pub struct MultiProductIter<I>
     iter: I,
     iter_orig: I,
 }
-
-impl<I> MultiProductIter<I>
-    where I: Iterator + Clone,
-          I::Item: Clone
-{
-    fn new(iter: I) -> Self {
-        Self {
-            cur: None,
-            iter: iter.clone(),
-            iter_orig: iter
-        }
-    }
-
-    fn iterate(&mut self) {
-        self.cur = self.iter.next();
-    }
-
-    fn reset(&mut self) {
-        self.iter = self.iter_orig.clone();
-    }
-
-    fn in_progress(&self) -> bool {
-        self.cur.is_some()
-    }
-}
-
-pub struct MultiProduct<I>(Vec<MultiProductIter<I>>)
-    where I: Iterator + Clone,
-          I::Item: Clone;
 
 enum MultiProductIterState {
     StartOfIter,
@@ -346,21 +328,23 @@ impl<I> MultiProduct<I>
             }
 
             if last.cur.is_some() {
-                return true;
+                true
             } else if MultiProduct::cascade(rest, state) {
                 last.reset();
                 last.iterate();
                 // If iterator is None twice consecutively, then iterator is
                 // empty; whole product is empty.
                 last.in_progress()
-            } else { return false; }
+            } else {
+                false
+            }
         } else {
             // Reached end of iterator list. On initialisation, return true.
             // At end of iteration (final iterator finishes), finish.
-            return match state {
+            match state {
                 StartOfIter => false,
                 MidIter { on_first_iter } => on_first_iter
-            };
+            }
         }
     }
 
@@ -371,6 +355,31 @@ impl<I> MultiProduct<I>
     }
 }
 
+impl<I> MultiProductIter<I>
+    where I: Iterator + Clone,
+          I::Item: Clone
+{
+    fn new(iter: I) -> Self {
+        Self {
+            cur: None,
+            iter: iter.clone(),
+            iter_orig: iter
+        }
+    }
+
+    fn iterate(&mut self) {
+        self.cur = self.iter.next();
+    }
+
+    fn reset(&mut self) {
+        self.iter = self.iter_orig.clone();
+    }
+
+    fn in_progress(&self) -> bool {
+        self.cur.is_some()
+    }
+}
+
 impl<I> Iterator for MultiProduct<I>
     where I: Iterator + Clone,
           I::Item: Clone
@@ -378,24 +387,15 @@ impl<I> Iterator for MultiProduct<I>
     type Item = Vec<I::Item>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if MultiProduct::cascade(&mut self.0, MultiProductIterState::StartOfIter) {
+        if MultiProduct::cascade(
+            &mut self.0,
+            MultiProductIterState::StartOfIter
+        ) {
             Some(self.curr_iterator())
         } else {
             None
         }
     }
-}
-
-/// ```rust,ignore
-/// let product = self::multi_cartesian_product(vec![[1,2,3],[4,5,6],[7,8,9]]);
-/// let product_vec: Vec<Vec<i32>> = product.collect();
-/// assert_eq!(product_vec[0], vec![1,4,7]);
-/// ```
-pub fn multi_cartesian_product<I>(iters: Vec<I>) -> MultiProduct<I>
-    where I: Iterator + Clone,
-          I::Item: Clone
-{
-    MultiProduct(iters.into_iter().map(MultiProductIter::new).collect())
 }
 
 #[derive(Debug, Clone)]
