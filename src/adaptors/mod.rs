@@ -262,124 +262,9 @@ impl<I> Iterator for PutBack<I>
     }
 }
 
-pub struct _MultiProductIter<I>
-    where I: Iterator + Clone,
-          I::Item: Clone
-{
-    cur: Option<I::Item>,
-    iter: I,
-    iter_orig: I,
-}
-
-impl<I> _MultiProductIter<I>
-    where I: Iterator + Clone,
-          I::Item: Clone
-{
-    fn new(iter: I) -> Self {
-        Self {
-            cur: None,
-            iter: iter.clone(),
-            iter_orig: iter
-        }
-    }
-}
-
-pub enum _MultiProduct<I>
-    where I: Iterator + Clone,
-          I::Item: Clone
-{
-    Ready(Option<Vec<I>>),
-    Started(Option<Vec<MultiProductIter<I>>>)
-}
-
-impl<I> _MultiProduct<I>
-    where I: Iterator + Clone,
-          I::Item: Clone
-{
-    fn cascade(multi_iters: &mut [MultiProductIter<I>], iterate: bool) -> bool {
-        if let Some((last, rest)) = multi_iters.split_last_mut()  {
-            if iterate {
-                last.cur = last.iter.next();
-            }
-
-            if last.cur.is_some() {
-                true
-            } else if MultiProduct::cascade(rest, iterate) {
-                last.iter = last.iter_orig.clone();
-                last.cur = last.iter.next();
-                // If iterator is None twice consecutively, then iterator is
-                // empty; whole product is empty.
-                last.cur.is_some()
-            } else { false }
-        } else {
-            // Reached end of iterator list. On initialisation, return true.
-            // At end of iteration (final iterator finishes), finish.
-            !iterate
-        }
-    }
-
-    fn curr_iterator(&self) -> Vec<I::Item> {
-        if let &MultiProduct::Started(Some(ref multi_iters)) = self {
-            multi_iters.iter().map(|multi_iter| {
-                multi_iter.cur.as_ref().unwrap().clone()
-            }).collect()
-        } else { panic!() }
-    }
-}
-
-impl<I> Iterator for _MultiProduct<I>
-    where I: Iterator + Clone,
-          I::Item: Clone
-{
-    type Item = Vec<I::Item>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        use self::MultiProduct::*;
-        let iterate: bool;
-        let ongoing: bool;
-
-        *self = match *self {
-            Ready(ref mut iters) => {
-                iterate = false;
-                let _iters = iters.take().unwrap();
-
-                Started(Some(
-                    _iters.into_iter().map(MultiProductIter::new).collect()
-                ))
-            },
-            Started(ref mut multi_iters) => {
-                iterate = true;
-                Started(multi_iters.take())
-            },
-        };
-
-        if let &mut Started(Some(ref mut multi_iters)) = self {
-            ongoing = MultiProduct::cascade(multi_iters, iterate);
-        } else { panic!() }
-
-        if ongoing {
-            Some(self.curr_iterator())
-        } else {
-            None
-        }
-    }
-}
-
-/// ```rust,ignore
-/// let product = self::multi_cartesian_product(vec![[1,2,3],[4,5,6],[7,8,9]]);
-/// let product_vec: Vec<Vec<i32>> = product.collect();
-/// assert_eq!(product_vec[0], vec![1,4,7]);
-/// ```
-pub fn _multi_cartesian_product<I>(iters: Vec<I>) -> MultiProduct<I>
-    where I: Iterator + Clone,
-          I::Item: Clone
-{
-    MultiProduct::Ready(Some(iters))
-}
-
 #[test]
 fn thing() {
-    let product = self::multi_cartesian_product(vec![1..4, 4..7, 7..10, 10..13]);
+    let mut product = self::multi_cartesian_product(vec![1..4, 4..7, 7..10, 10..13]);
     let mut i = 0;
     for p in product {
         i += 1;
@@ -413,11 +298,11 @@ impl<I> MultiProductIter<I>
         }
     }
 
-    fn iterate(&self) {
+    fn iterate(&mut self) {
         self.cur = self.iter.next();
     }
 
-    fn reset(&self) {
+    fn reset(&mut self) {
         self.iter = self.iter_orig.clone();
     }
 
@@ -426,7 +311,9 @@ impl<I> MultiProductIter<I>
     }
 }
 
-type MultiProduct<I> = Vec<MultiProductIter<I>>;
+pub struct MultiProduct<I>(Vec<MultiProductIter<I>>)
+    where I: Iterator + Clone,
+          I::Item: Clone;
 
 enum MultiProductIterState {
     StartOfIter,
@@ -439,7 +326,7 @@ impl<I> MultiProduct<I>
 {
     fn cascade(
         multi_iters: &mut [MultiProductIter<I>],
-        state: MultiProductIterState
+        mut state: MultiProductIterState
     ) -> bool {
         use self::MultiProductIterState::*;
 
@@ -478,7 +365,7 @@ impl<I> MultiProduct<I>
     }
 
     fn curr_iterator(&self) -> Vec<I::Item> {
-        self.iter().map(|multi_iter| {
+        self.0.iter().map(|multi_iter| {
             multi_iter.cur.as_ref().unwrap().clone()
         }).collect()
     }
@@ -491,9 +378,11 @@ impl<I> Iterator for MultiProduct<I>
     type Item = Vec<I::Item>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        use self::MultiProduct::*;
-
-
+        if MultiProduct::cascade(&mut self.0, MultiProductIterState::StartOfIter) {
+            Some(self.curr_iterator())
+        } else {
+            None
+        }
     }
 }
 
@@ -506,7 +395,7 @@ pub fn multi_cartesian_product<I>(iters: Vec<I>) -> MultiProduct<I>
     where I: Iterator + Clone,
           I::Item: Clone
 {
-    iters.into_iter().map(MultiProductIter::new).collect()
+    MultiProduct(iters.into_iter().map(MultiProductIter::new).collect())
 }
 
 #[derive(Debug, Clone)]
