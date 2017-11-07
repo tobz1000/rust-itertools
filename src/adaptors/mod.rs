@@ -264,13 +264,9 @@ impl<I> Iterator for PutBack<I>
 
 #[test]
 fn thing() {
-    let mut product = self::multi_cartesian_product(vec![1..4, 4..7, 7..10, 10..13].into_iter());
-    let mut i = 0;
-    for p in product {
-        i += 1;
-        if i > 100 {
-            break;
-        }
+    let mut product = self::multi_cartesian_product(vec![0..3,3..6,6..9,9..12].into_iter());
+    // println!("{:?}", product.last());
+    for p in product.take(100) {
         println!("{:?}", p);
     }
 }
@@ -396,6 +392,43 @@ impl<I> Iterator for MultiProduct<I>
             None
         }
     }
+
+    fn count(self) -> usize {
+        self.0.into_iter().fold(1, |acc, multi_iter| {
+            acc * multi_iter.iter.count()
+        })
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        if self.0.len() == 0 {
+            return (0, Some(0));
+        }
+
+        self.0.iter().fold((1, Some(1)), |(mut low, mut high), multi_iter| {
+            let (next_low, next_high) = multi_iter.iter.size_hint();
+            println!("{:?}", (next_low, next_high));
+            low *= next_low;
+            high = match (high, next_high) {
+                (Some(high), Some(next_high)) => Some(high * next_high),
+                _ => None
+            };
+            (low, high)
+        })
+    }
+
+    fn last(self) -> Option<Self::Item> {
+        let lasts: Vec<Option<I::Item>> = self.0.into_iter().map(|multi_iter| {
+            multi_iter.iter.last()
+        }).collect();
+
+        if lasts.iter().any(|elm| elm.is_none()) {
+            None
+        } else {
+            Some(lasts.into_iter().map(|elm| elm.unwrap()).collect())
+        }
+    }
+
+    //TODO: nth(), skip()
 }
 
 #[derive(Debug, Clone)]
