@@ -453,6 +453,16 @@ impl<I> MultiProduct<I>
             multi_iter.cur.as_ref().unwrap().clone()
         }).collect()
     }
+
+    /// Returns true if iteration has started and has not yet finished; false
+    /// otherwise.
+    fn in_progress(&self) -> bool {
+        if let Some(last) = self.0.last() {
+            last.in_progress()
+        } else {
+            false
+        }
+    }
 }
 
 impl<I> MultiProductIter<I>
@@ -501,28 +511,30 @@ impl<I> Iterator for MultiProduct<I>
         }
     }
 
-    //TODO - may need to alter/use default if iteration already started?
     fn count(self) -> usize {
+        // Custom calculation is inaccurate if iteration has started
+        if self.in_progress() {
+            return Iterator::count(self);
+        }
+
         self.0.into_iter().fold(1, |acc, multi_iter| {
             acc * multi_iter.iter.count()
         })
     }
 
-    //TODO - this assumes iteration has not started. May be incorrect otherwise.
     fn size_hint(&self) -> (usize, Option<usize>) {
         if self.0.len() == 0 {
             return (0, Some(0));
         }
 
-        self.0.iter().fold((1, Some(1)), |(mut low, mut high), multi_iter| {
-            let (next_low, next_high) = multi_iter.iter.size_hint();
-            println!("{:?}", (next_low, next_high));
-            low *= next_low;
-            high = match (high, next_high) {
-                (Some(high), Some(next_high)) => Some(high * next_high),
-                _ => None
-            };
-            (low, high)
+        // Delegated size_hint calls may return inaccurate size_hint values
+        // if iteration has started
+        if self.in_progress() {
+            return Iterator::size_hint(self);
+        }
+
+        self.0.iter().fold((1, Some(1)), |acc_size_hint, multi_iter| {
+            size_hint::mul(acc_size_hint, multi_iter.iter.size_hint())
         })
     }
 
@@ -537,8 +549,6 @@ impl<I> Iterator for MultiProduct<I>
             Some(lasts.into_iter().map(|elm| elm.unwrap()).collect())
         }
     }
-
-    //TODO: nth(), skip()
 }
 
 /// A “meta iterator adaptor”. Its closure recives a reference to the iterator
