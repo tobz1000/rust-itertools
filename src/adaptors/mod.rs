@@ -262,175 +262,6 @@ impl<I> Iterator for PutBack<I>
     }
 }
 
-#[test]
-fn thing() {
-    let mut product = self::multi_cartesian_product(vec![0..3,3..6,6..9,9..12].into_iter());
-    // println!("{:?}", product.last());
-    for p in product.take(100) {
-        println!("{:?}", p);
-    }
-}
-
-pub fn multi_cartesian_product<I>(iters: I) -> MultiProduct<I::Item>
-    where I: Iterator,
-          I::Item: Iterator + Clone,
-          <I::Item as Iterator>::Item: Clone
-{
-    MultiProduct(iters.map(MultiProductIter::new).collect())
-}
-
-
-pub struct MultiProduct<I>(Vec<MultiProductIter<I>>)
-    where I: Iterator + Clone,
-          I::Item: Clone;
-
-pub struct MultiProductIter<I>
-    where I: Iterator + Clone,
-          I::Item: Clone
-{
-    cur: Option<I::Item>,
-    iter: I,
-    iter_orig: I,
-}
-
-enum MultiProductIterState {
-    StartOfIter,
-    MidIter { on_first_iter: bool },
-}
-
-impl<I> MultiProduct<I>
-    where I: Iterator + Clone,
-          I::Item: Clone
-{
-    fn cascade(
-        multi_iters: &mut [MultiProductIter<I>],
-        mut state: MultiProductIterState
-    ) -> bool {
-        use self::MultiProductIterState::*;
-
-        if let Some((last, rest)) = multi_iters.split_last_mut() {
-            // TODO review this
-            let on_first_iter = match state {
-                StartOfIter => {
-                    let on_first_iter = !last.in_progress();
-                    state = MidIter { on_first_iter };
-                    on_first_iter
-                },
-                MidIter { on_first_iter } => on_first_iter
-            };
-
-            if !on_first_iter {
-                last.iterate();
-            }
-
-            if last.cur.is_some() {
-                true
-            } else if MultiProduct::cascade(rest, state) {
-                last.reset();
-                last.iterate();
-                // If iterator is None twice consecutively, then iterator is
-                // empty; whole product is empty.
-                last.in_progress()
-            } else {
-                false
-            }
-        } else {
-            // Reached end of iterator list. On initialisation, return true.
-            // At end of iteration (final iterator finishes), finish.
-            match state {
-                StartOfIter => false,
-                MidIter { on_first_iter } => on_first_iter
-            }
-        }
-    }
-
-    fn curr_iterator(&self) -> Vec<I::Item> {
-        self.0.iter().map(|multi_iter| {
-            multi_iter.cur.as_ref().unwrap().clone()
-        }).collect()
-    }
-}
-
-impl<I> MultiProductIter<I>
-    where I: Iterator + Clone,
-          I::Item: Clone
-{
-    fn new(iter: I) -> Self {
-        Self {
-            cur: None,
-            iter: iter.clone(),
-            iter_orig: iter
-        }
-    }
-
-    fn iterate(&mut self) {
-        self.cur = self.iter.next();
-    }
-
-    fn reset(&mut self) {
-        self.iter = self.iter_orig.clone();
-    }
-
-    fn in_progress(&self) -> bool {
-        self.cur.is_some()
-    }
-}
-
-impl<I> Iterator for MultiProduct<I>
-    where I: Iterator + Clone,
-          I::Item: Clone
-{
-    type Item = Vec<I::Item>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if MultiProduct::cascade(
-            &mut self.0,
-            MultiProductIterState::StartOfIter
-        ) {
-            Some(self.curr_iterator())
-        } else {
-            None
-        }
-    }
-
-    fn count(self) -> usize {
-        self.0.into_iter().fold(1, |acc, multi_iter| {
-            acc * multi_iter.iter.count()
-        })
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        if self.0.len() == 0 {
-            return (0, Some(0));
-        }
-
-        self.0.iter().fold((1, Some(1)), |(mut low, mut high), multi_iter| {
-            let (next_low, next_high) = multi_iter.iter.size_hint();
-            println!("{:?}", (next_low, next_high));
-            low *= next_low;
-            high = match (high, next_high) {
-                (Some(high), Some(next_high)) => Some(high * next_high),
-                _ => None
-            };
-            (low, high)
-        })
-    }
-
-    fn last(self) -> Option<Self::Item> {
-        let lasts: Vec<Option<I::Item>> = self.0.into_iter().map(|multi_iter| {
-            multi_iter.iter.last()
-        }).collect();
-
-        if lasts.iter().any(|elm| elm.is_none()) {
-            None
-        } else {
-            Some(lasts.into_iter().map(|elm| elm.unwrap()).collect())
-        }
-    }
-
-    //TODO: nth(), skip()
-}
-
 #[derive(Debug, Clone)]
 /// An iterator adaptor that iterates over the cartesian product of
 /// the element sets of two iterators `I` and `J`.
@@ -463,7 +294,6 @@ pub fn cartesian_product<I, J>(mut i: I, j: J) -> Product<I, J>
         b_orig: j,
     }
 }
-
 
 impl<I, J> Iterator for Product<I, J>
     where I: Iterator,
@@ -501,7 +331,8 @@ impl<I, J> Iterator for Product<I, J>
         // Compute a * b_orig + b for both lower and upper bound
         size_hint::add(
             size_hint::mul(self.a.size_hint(), self.b_orig.size_hint()),
-            (b_min * has_cur, b_max.map(move |x| x * has_cur)))
+            (b_min * has_cur, b_max.map(move |x| x * has_cur))
+        )
     }
 
     fn fold<Acc, G>(mut self, mut accum: Acc, mut f: G) -> Acc
@@ -525,6 +356,189 @@ impl<I, J> Iterator for Product<I, J>
         }
         accum
     }
+}
+
+/// An iterator adaptor that iterates over the cartesian product of
+/// multiple iterators of type `I`.
+///
+/// An iterator element type is `Vec<I>`.
+///
+/// See [`.multi_cartesian_product()`](../trait.Itertools.html#method.multi_cartesian_product)
+/// for more information.
+pub struct MultiProduct<I>(Vec<MultiProductIter<I>>)
+    where I: Iterator + Clone,
+          I::Item: Clone;
+
+/// Create a new cartesian product iterator over an arbitrary number
+/// of iterators of the same type.
+///
+/// Iterator element is of type `Vec<H::Item::Item>`.
+pub fn multi_cartesian_product<H>(iters: H) -> MultiProduct<<H::Item as IntoIterator>::IntoIter>
+    where H: Iterator,
+          H::Item: IntoIterator,
+          <H::Item as IntoIterator>::IntoIter: Clone,
+          <H::Item as IntoIterator>::Item: Clone
+{
+    MultiProduct(iters.map(|i| MultiProductIter::new(i.into_iter())).collect())
+}
+
+/// Holds the state of a single iterator within a MultiProduct.
+struct MultiProductIter<I>
+    where I: Iterator + Clone,
+          I::Item: Clone
+{
+    cur: Option<I::Item>,
+    iter: I,
+    iter_orig: I,
+}
+
+/// Holds the current state during an iteration of a MultiProduct.
+enum MultiProductIterState {
+    StartOfIter,
+    MidIter { on_first_iter: bool },
+}
+
+impl<I> MultiProduct<I>
+    where I: Iterator + Clone,
+          I::Item: Clone
+{
+    /// Iterates the rightmost iterator, then recursively iterates iterators
+    /// to the left if necessary.
+    ///
+    /// Returns true if the iteration succeeded, else false;
+    fn iterate_last(
+        multi_iters: &mut [MultiProductIter<I>],
+        mut state: MultiProductIterState
+    ) -> bool {
+        use self::MultiProductIterState::*;
+
+        if let Some((last, rest)) = multi_iters.split_last_mut() {
+            let on_first_iter = match state {
+                StartOfIter => {
+                    let on_first_iter = !last.in_progress();
+                    state = MidIter { on_first_iter };
+                    on_first_iter
+                },
+                MidIter { on_first_iter } => on_first_iter
+            };
+
+            if !on_first_iter {
+                last.iterate();
+            }
+
+            if last.cur.is_some() {
+                true
+            } else if MultiProduct::iterate_last(rest, state) {
+                last.reset();
+                last.iterate();
+                // If iterator is None twice consecutively, then iterator is
+                // empty; whole product is empty.
+                last.in_progress()
+            } else {
+                false
+            }
+        } else {
+            // Reached end of iterator list. On initialisation, return true.
+            // At end of iteration (final iterator finishes), finish.
+            match state {
+                StartOfIter => false,
+                MidIter { on_first_iter } => on_first_iter
+            }
+        }
+    }
+
+    /// Returns the unwrapped value of the next iteration.
+    fn curr_iterator(&self) -> Vec<I::Item> {
+        self.0.iter().map(|multi_iter| {
+            multi_iter.cur.as_ref().unwrap().clone()
+        }).collect()
+    }
+}
+
+impl<I> MultiProductIter<I>
+    where I: Iterator + Clone,
+          I::Item: Clone
+{
+    fn new(iter: I) -> Self {
+        Self {
+            cur: None,
+            iter: iter.clone(),
+            iter_orig: iter
+        }
+    }
+
+    /// Iterate the managed iterator.
+    fn iterate(&mut self) {
+        self.cur = self.iter.next();
+    }
+
+    /// Reset the managed iterator.
+    fn reset(&mut self) {
+        self.iter = self.iter_orig.clone();
+    }
+
+    /// Returns true if the current iterator has been started and has not yet
+    /// finished; false otherwise.
+    fn in_progress(&self) -> bool {
+        self.cur.is_some()
+    }
+}
+
+impl<I> Iterator for MultiProduct<I>
+    where I: Iterator + Clone,
+          I::Item: Clone
+{
+    type Item = Vec<I::Item>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if MultiProduct::iterate_last(
+            &mut self.0,
+            MultiProductIterState::StartOfIter
+        ) {
+            Some(self.curr_iterator())
+        } else {
+            None
+        }
+    }
+
+    //TODO - may need to alter/use default if iteration already started?
+    fn count(self) -> usize {
+        self.0.into_iter().fold(1, |acc, multi_iter| {
+            acc * multi_iter.iter.count()
+        })
+    }
+
+    //TODO - this assumes iteration has not started. May be incorrect otherwise.
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        if self.0.len() == 0 {
+            return (0, Some(0));
+        }
+
+        self.0.iter().fold((1, Some(1)), |(mut low, mut high), multi_iter| {
+            let (next_low, next_high) = multi_iter.iter.size_hint();
+            println!("{:?}", (next_low, next_high));
+            low *= next_low;
+            high = match (high, next_high) {
+                (Some(high), Some(next_high)) => Some(high * next_high),
+                _ => None
+            };
+            (low, high)
+        })
+    }
+
+    fn last(self) -> Option<Self::Item> {
+        let lasts: Vec<Option<I::Item>> = self.0.into_iter().map(|multi_iter| {
+            multi_iter.iter.last()
+        }).collect();
+
+        if lasts.iter().any(|elm| elm.is_none()) {
+            None
+        } else {
+            Some(lasts.into_iter().map(|elm| elm.unwrap()).collect())
+        }
+    }
+
+    //TODO: nth(), skip()
 }
 
 /// A “meta iterator adaptor”. Its closure recives a reference to the iterator
