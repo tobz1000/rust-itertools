@@ -53,6 +53,7 @@ pub mod structs {
         Interleave,
         InterleaveShortest,
         Product,
+        MultiProduct,
         PutBack,
         Batching,
         Step,
@@ -789,6 +790,26 @@ pub trait Itertools : Iterator {
               J::IntoIter: Clone
     {
         adaptors::cartesian_product(self, other.into_iter())
+    }
+
+    /// Return an iterator adaptor that iterates over the cartesian product of
+    /// all sub-iterators returned by meta-iterator `self`.
+    ///
+    /// All provided iterators must yield the same `Item` type. To generate
+    /// the product of iterators yielding multiple types, use [`iproduct`](macro.iproduct.html).
+    ///
+    ///
+    /// An iterator element type is `Vec<I>`.
+    ///
+    /// use itertools::Itertools;
+    /// let meta_it = []
+    fn multi_cartesian_product(self) -> MultiProduct<<Self::Item as IntoIterator>::IntoIter>
+        where Self: Iterator + Sized,
+              Self::Item: IntoIterator,
+              <Self::Item as IntoIterator>::IntoIter: Clone,
+              <Self::Item as IntoIterator>::Item: Clone
+    {
+        adaptors::multi_cartesian_product(self)
     }
 
     /// Return an iterator adaptor that uses the passed-in closure to
