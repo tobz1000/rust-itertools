@@ -27,6 +27,56 @@ fn product3() {
     }
 }
 
+#[test]
+fn multi_cartesian_product_iter() {
+    let mcp_test = ||
+        (0..3).map(|i| (3 * i)..(3 + 3 * i)).multi_cartesian_product();
+
+    let prod = mcp_test();
+    let prod2 = mcp_test();
+    let mut prod3 = mcp_test();
+
+    let expected = [
+        vec![0, 3, 6],
+        vec![0, 3, 7],
+        vec![0, 3, 8],
+        vec![0, 4, 6],
+        vec![0, 4, 7],
+        vec![0, 4, 8],
+        vec![0, 5, 6],
+        vec![0, 5, 7],
+        vec![0, 5, 8],
+        vec![1, 3, 6],
+        vec![1, 3, 7],
+        vec![1, 3, 8],
+        vec![1, 4, 6],
+        vec![1, 4, 7],
+        vec![1, 4, 8],
+        vec![1, 5, 6],
+        vec![1, 5, 7],
+        vec![1, 5, 8],
+        vec![2, 3, 6],
+        vec![2, 3, 7],
+        vec![2, 3, 8],
+        vec![2, 4, 6],
+        vec![2, 4, 7],
+        vec![2, 4, 8],
+        vec![2, 5, 6],
+        vec![2, 5, 7],
+        vec![2, 5, 8],
+    ];
+
+    for (i, p) in prod.enumerate() {
+        assert_eq!(p, expected[i]);
+    }
+
+    assert_eq!(prod2.count(), 27);
+
+    for _ in 0..10 {
+        prod3.next();
+    }
+    assert_eq!(prod3.count(), 17);
+}
 
 #[test]
 fn interleave_shortest() {
