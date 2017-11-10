@@ -512,15 +512,24 @@ impl<I> Iterator for MultiProduct<I>
     }
 
     fn count(self) -> usize {
-        // Custom calculation is inaccurate if iteration has started; use
-        // default in this case
-        if self.in_progress() {
-            return Iterator::count(self);
+        if self.0.len() == 0 {
+            return 0;
         }
 
-        self.0.into_iter().fold(1, |acc, multi_iter| {
-            acc * multi_iter.iter.count()
-        })
+        if !self.in_progress() {
+            return self.0.into_iter().fold(1, |acc, multi_iter| {
+                acc * multi_iter.iter.count()
+            });
+        }
+
+        self.0.into_iter().fold(
+            0,
+            |acc, MultiProductIter { iter, iter_orig, cur: _ }| {
+                let cur_count = iter.count();
+                let total_count = iter_orig.count();
+                acc * total_count + cur_count
+            }
+        )
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -528,15 +537,13 @@ impl<I> Iterator for MultiProduct<I>
             return (0, Some(0));
         }
 
-        // Delegated size_hint calls may return inaccurate size_hint values
-        // if iteration has started; use default in this case
-        if self.in_progress() {
-            return Iterator::size_hint(self);
+        if !self.in_progress() {
+            return self.0.iter().fold((1, Some(1)), |acc_size_hint, multi_iter| {
+                size_hint::mul(acc_size_hint, multi_iter.iter.size_hint())
+            });
         }
 
-        self.0.iter().fold((1, Some(1)), |acc_size_hint, multi_iter| {
-            size_hint::mul(acc_size_hint, multi_iter.iter.size_hint())
-        })
+        (0, None)
     }
 
     fn last(self) -> Option<Self::Item> {
