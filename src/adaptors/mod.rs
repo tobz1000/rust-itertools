@@ -405,7 +405,7 @@ impl<I> MultiProduct<I>
     /// Iterates the rightmost iterator, then recursively iterates iterators
     /// to the left if necessary.
     ///
-    /// Returns true if the iteration succeeded, else false;
+    /// Returns true if the iteration succeeded, else false.
     fn iterate_last(
         multi_iters: &mut [MultiProductIter<I>],
         mut state: MultiProductIterState
@@ -426,7 +426,7 @@ impl<I> MultiProduct<I>
                 last.iterate();
             }
 
-            if last.cur.is_some() {
+            if last.in_progress() {
                 true
             } else if MultiProduct::iterate_last(rest, state) {
                 last.reset();
@@ -450,7 +450,7 @@ impl<I> MultiProduct<I>
     /// Returns the unwrapped value of the next iteration.
     fn curr_iterator(&self) -> Vec<I::Item> {
         self.0.iter().map(|multi_iter| {
-            multi_iter.cur.as_ref().unwrap().clone()
+            multi_iter.cur.clone().unwrap()
         }).collect()
     }
 
@@ -512,7 +512,8 @@ impl<I> Iterator for MultiProduct<I>
     }
 
     fn count(self) -> usize {
-        // Custom calculation is inaccurate if iteration has started
+        // Custom calculation is inaccurate if iteration has started; use
+        // default in this case
         if self.in_progress() {
             return Iterator::count(self);
         }
@@ -528,7 +529,7 @@ impl<I> Iterator for MultiProduct<I>
         }
 
         // Delegated size_hint calls may return inaccurate size_hint values
-        // if iteration has started
+        // if iteration has started; use default in this case
         if self.in_progress() {
             return Iterator::size_hint(self);
         }
