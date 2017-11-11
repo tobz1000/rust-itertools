@@ -29,12 +29,9 @@ fn product3() {
 
 #[test]
 fn multi_cartesian_product_iter() {
-    let mcp_test = ||
-        (0..3).map(|i| (3 * i)..(3 + 3 * i)).multi_cartesian_product();
-
-    let prod = mcp_test();
-    let prod2 = mcp_test();
-    let mut prod3 = mcp_test();
+    let mcp_test = || {
+        (0..3).map(|i| (3 * i)..(3 + 3 * i)).multi_cartesian_product()
+    };
 
     let expected = [
         vec![0, 3, 6],
@@ -66,16 +63,24 @@ fn multi_cartesian_product_iter() {
         vec![2, 5, 8],
     ];
 
-    for (i, p) in prod.enumerate() {
+    for (i, p) in mcp_test().enumerate() {
         assert_eq!(p, expected[i]);
     }
 
-    assert_eq!(prod2.count(), 27);
+    for iter_count in 0..(expected.len() + 1) {
+        let mut prod = mcp_test();
 
-    for _ in 0..10 {
-        prod3.next();
+        let exp_count = expected.len() - iter_count;
+
+        for _ in 0..iter_count {
+            prod.next();
+        }
+
+        assert_eq!(prod.size_hint(), (exp_count, Some(exp_count)));
+        assert_eq!(prod.count(), exp_count);
     }
-    assert_eq!(prod3.count(), 17);
+
+    assert_eq!(mcp_test().last().unwrap(), expected[expected.len() - 1]);
 }
 
 #[test]

@@ -525,8 +525,8 @@ impl<I> Iterator for MultiProduct<I>
         self.0.into_iter().fold(
             0,
             |acc, MultiProductIter { iter, iter_orig, cur: _ }| {
-                let cur_count = iter.count();
                 let total_count = iter_orig.count();
+                let cur_count = iter.count();
                 acc * total_count + cur_count
             }
         )
@@ -538,12 +538,19 @@ impl<I> Iterator for MultiProduct<I>
         }
 
         if !self.in_progress() {
-            return self.0.iter().fold((1, Some(1)), |acc_size_hint, multi_iter| {
-                size_hint::mul(acc_size_hint, multi_iter.iter.size_hint())
+            return self.0.iter().fold((1, Some(1)), |acc, multi_iter| {
+                size_hint::mul(acc, multi_iter.iter.size_hint())
             });
         }
 
-        (0, None)
+        self.0.iter().fold(
+            (0, Some(0)),
+            |acc, &MultiProductIter { ref iter, ref iter_orig, cur: _ }| {
+                let cur_size = iter.size_hint();
+                let total_size = iter_orig.size_hint();
+                size_hint::add(size_hint::mul(acc, total_size), cur_size)
+            }
+        )
     }
 
     fn last(self) -> Option<Self::Item> {
