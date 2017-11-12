@@ -8,6 +8,7 @@ use std::fmt;
 use std::mem::replace;
 use std::iter::{Fuse, Peekable, FromIterator};
 use std::marker::PhantomData;
+use std::vec::Vec;
 use size_hint;
 use fold;
 
