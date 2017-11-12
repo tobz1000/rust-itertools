@@ -365,6 +365,7 @@ impl<I, J> Iterator for Product<I, J>
 ///
 /// See [`.multi_cartesian_product()`](../trait.Itertools.html#method.multi_cartesian_product)
 /// for more information.
+#[must_use = "iterator adaptors are lazy and do nothing unless consumed"]
 pub struct MultiProduct<I>(Vec<MultiProductIter<I>>)
     where I: Iterator + Clone,
           I::Item: Clone;
