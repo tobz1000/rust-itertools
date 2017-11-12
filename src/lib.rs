@@ -796,13 +796,26 @@ pub trait Itertools : Iterator {
     /// all sub-iterators returned by meta-iterator `self`.
     ///
     /// All provided iterators must yield the same `Item` type. To generate
-    /// the product of iterators yielding multiple types, use [`iproduct`](macro.iproduct.html).
+    /// the product of iterators yielding multiple types, use the
+    /// [`iproduct`](macro.iproduct.html) macro.
     ///
     ///
     /// An iterator element type is `Vec<I>`.
     ///
+    /// ```
     /// use itertools::Itertools;
-    /// let meta_it = []
+    /// let mut multi_prod = (0..3).map(|i| (i * 2)..(i * 2 + 2))
+    ///     .multi_cartesian_product();
+    /// assert_eq!(multi_prod.next(), Some(vec![0, 2, 4]));
+    /// assert_eq!(multi_prod.next(), Some(vec![0, 2, 5]));
+    /// assert_eq!(multi_prod.next(), Some(vec![0, 3, 4]));
+    /// assert_eq!(multi_prod.next(), Some(vec![0, 3, 5]));
+    /// assert_eq!(multi_prod.next(), Some(vec![1, 2, 4]));
+    /// assert_eq!(multi_prod.next(), Some(vec![1, 2, 5]));
+    /// assert_eq!(multi_prod.next(), Some(vec![1, 3, 4]));
+    /// assert_eq!(multi_prod.next(), Some(vec![1, 3, 5]));
+    /// assert_eq!(multi_prod.next(), None);
+    /// ```
     fn multi_cartesian_product(self) -> MultiProduct<<Self::Item as IntoIterator>::IntoIter>
         where Self: Iterator + Sized,
               Self::Item: IntoIterator,
