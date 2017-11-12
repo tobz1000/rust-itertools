@@ -53,7 +53,6 @@ pub mod structs {
         Interleave,
         InterleaveShortest,
         Product,
-        MultiProduct,
         PutBack,
         Batching,
         Step,
@@ -67,6 +66,8 @@ pub mod structs {
         Flatten,
         Positions,
     };
+    #[cfg(feature = "use_std")]
+    pub use adaptors::MultiProduct;
     #[cfg(feature = "use_std")]
     pub use combinations::Combinations;
     pub use cons_tuples_impl::ConsTuples;
@@ -815,6 +816,7 @@ pub trait Itertools : Iterator {
     /// assert_eq!(multi_prod.next(), Some(vec![1, 3, 5]));
     /// assert_eq!(multi_prod.next(), None);
     /// ```
+    #[cfg(feature = "use_std")]
     fn multi_cartesian_product(self) -> MultiProduct<<Self::Item as IntoIterator>::IntoIter>
         where Self: Iterator + Sized,
               Self::Item: IntoIterator,

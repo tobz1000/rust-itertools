@@ -1,4 +1,5 @@
-use std::vec::Vec;
+#![cfg(feature = "use_std")]
+
 use size_hint;
 
 /// An iterator adaptor that iterates over the cartesian product of
