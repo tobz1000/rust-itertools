@@ -93,10 +93,8 @@ impl<I> MultiProduct<I>
     }
 
     /// Returns the unwrapped value of the next iteration.
-    fn curr_iterator(&self) -> Vec<I::Item> {
-        self.0.iter().map(|multi_iter| {
-            multi_iter.cur.clone().unwrap()
-        }).collect()
+    fn curr_iterator<'a>(&'a self) -> impl Iterator<Item=I::Item> + 'a {
+        self.0.iter().map(|multi_iter| multi_iter.cur.clone().unwrap())
     }
 
     /// Returns true if iteration has started and has not yet finished; false
@@ -143,7 +141,7 @@ impl<I> Iterator for MultiProduct<I>
     where I: Iterator + Clone,
           I::Item: Clone
 {
-    type Item = Vec<I::Item>;
+    type Item = Iterator<Item=I::Item> + Sized;
 
     fn next(&mut self) -> Option<Self::Item> {
         if MultiProduct::iterate_last(
@@ -206,7 +204,7 @@ impl<I> Iterator for MultiProduct<I>
         if lasts.iter().any(|elm| elm.is_none()) {
             None
         } else {
-            Some(lasts.into_iter().map(|elm| elm.unwrap()).collect())
+            Some(lasts.into_iter().map(|elm| elm.unwrap()))
         }
     }
 }

@@ -2,6 +2,8 @@
 #![crate_name="itertools"]
 #![cfg_attr(not(feature = "use_std"), no_std)]
 
+#![feature(conservative_impl_trait)]
+
 //! Itertools — extra iterator adaptors, functions and macros.
 //!
 //! To use the iterator methods in this crate, import the [`Itertools` trait](./trait.Itertools.html):
