@@ -1,6 +1,8 @@
 #![cfg(feature = "use_std")]
 
 use size_hint;
+use std::iter::Map;
+use std::slice::Iter as SliceIter;
 
 /// An iterator adaptor that iterates over the cartesian product of
 /// multiple iterators of type `I`.
@@ -42,6 +44,11 @@ enum MultiProductIterState {
     StartOfIter,
     MidIter { on_first_iter: bool },
 }
+
+// type MultiProductOutput<'a, I> = Map<
+//     SliceIter<'a, I>,
+//     (FnMut(SliceIter<'a, I>) -> I) + Sized
+// >;
 
 impl<I> MultiProduct<I>
     where I: Iterator + Clone,
@@ -97,6 +104,19 @@ impl<I> MultiProduct<I>
         self.0.iter().map(|multi_iter| {
             multi_iter.cur.clone().unwrap()
         }).collect()
+    }
+
+    /// Returns the unwrapped value of the next iteration.
+    // fn curr_iterator_(&self) -> MultiProductOutput<I::Item> {
+    fn curr_iterator_<F>(&self) -> Map<
+        SliceIter<MultiProductIter<I>>,
+        F
+    >
+        where F: (FnMut(MultiProductIter<I>) -> I), F: Sized
+    {
+        self.0.iter().map(|multi_iter| {
+            multi_iter.cur.clone().unwrap()
+        })
     }
 
     /// Returns true if iteration has started and has not yet finished; false
