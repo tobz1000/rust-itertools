@@ -84,6 +84,24 @@ fn multi_cartesian_product_iter() {
 }
 
 #[test]
+fn multi_cartesian_product_iter_empty() {
+    let mcp_empty_test = || {
+        vec![0..3, 3..6, 6..6].into_iter().multi_cartesian_product()
+    };
+
+    let mut i = 0;
+    for _ in mcp_empty_test() {
+        i += 1;
+    }
+
+    assert_eq!(i, 0);
+
+    assert_eq!(mcp_empty_test().count(), 0);
+    assert_eq!(mcp_empty_test().size_hint(), (0, Some(0)));
+    assert_eq!(mcp_empty_test().last(), None);
+}
+
+#[test]
 fn interleave_shortest() {
     let v0: Vec<i32> = vec![0, 2, 4];
     let v1: Vec<i32> = vec![1, 3, 5, 7];
