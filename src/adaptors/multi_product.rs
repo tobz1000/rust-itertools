@@ -1,6 +1,7 @@
 #![cfg(feature = "use_std")]
 
 use size_hint;
+use Itertools;
 
 /// An iterator adaptor that iterates over the cartesian product of
 /// multiple iterators of type `I`.
@@ -199,14 +200,17 @@ impl<I> Iterator for MultiProduct<I>
     }
 
     fn last(self) -> Option<Self::Item> {
-        let lasts: Vec<Option<I::Item>> = self.0.into_iter().map(|multi_iter| {
-            multi_iter.iter.last()
-        }).collect();
+        let iter_count = self.0.len();
 
-        if lasts.iter().any(|elm| elm.is_none()) {
-            None
+        let lasts: Self::Item = self.0.into_iter()
+            .map(|multi_iter| multi_iter.iter.last())
+            .while_some()
+            .collect();
+
+        if lasts.len() == iter_count {
+            Some(lasts)
         } else {
-            Some(lasts.into_iter().map(|elm| elm.unwrap()).collect())
+            None
         }
     }
 }
