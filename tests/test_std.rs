@@ -63,8 +63,8 @@ fn multi_cartesian_product_iter() {
         vec![2, 5, 8],
     ];
 
-    for (i, p) in mcp_test().enumerate() {
-        assert_eq!(p, expected[i]);
+    for (exp, actual) in mcp_test().zip_eq(expected.iter()) {
+        assert_eq!(exp, *actual);
     }
 
     for iter_count in 0..(expected.len() + 1) {
