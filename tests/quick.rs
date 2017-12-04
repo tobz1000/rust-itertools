@@ -187,6 +187,36 @@ impl<T, HK> qc::Arbitrary for Iter<T, HK>
     }
 }
 
+struct ShiftRange<T> {
+    start_iter: Box<Iterator<Item=T>>,
+    end_iter: Box<Iterator<Item=T>>,
+}
+
+impl<T> ShiftRange<T> {
+    fn new(
+        start_iter: Iterator<Item=T>,
+        end_iter: Iterator<Item=T>
+    ) -> Self {
+        ShiftRange {
+            start_iter: Box::new(start_iter),
+            end_iter: Box::new(end_iter)
+        }
+    }
+}
+
+impl<T> Iterator for ShiftRange<T> {
+    type Item = Range<T>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match (self.start_iter.next(), self.end_iter.next()) {
+            (Some(start), Some(end)) => Some(start..end),
+            _ => None
+        }
+    }
+}
+
+impl<T, HK> gc::Arbitrary for ShiftRange<T> {}
+
 fn correct_size_hint<I: Iterator>(mut it: I) -> bool {
     // record size hint at each iteration
     let initial_hint = it.size_hint();
