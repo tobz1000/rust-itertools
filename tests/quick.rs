@@ -187,35 +187,61 @@ impl<T, HK> qc::Arbitrary for Iter<T, HK>
     }
 }
 
-struct ShiftRange<T> {
-    start_iter: Box<Iterator<Item=T>>,
-    end_iter: Box<Iterator<Item=T>>,
+/// A meta-iterator which yields `Iter<i32>`s whose start/endpoints are
+/// increased or decreased linearly on each iteration.
+#[derive(Clone, Debug)]
+struct ShiftRange<HK = Inexact> {
+    range_start: i32,
+    range_end: i32,
+    start_step: i32,
+    end_step: i32,
+    iter_count: u32,
+    hint_kind: HK,
 }
 
-impl<T> ShiftRange<T> {
-    fn new(
-        start_iter: Iterator<Item=T>,
-        end_iter: Iterator<Item=T>
-    ) -> Self {
-        ShiftRange {
-            start_iter: Box::new(start_iter),
-            end_iter: Box::new(end_iter)
-        }
-    }
-}
-
-impl<T> Iterator for ShiftRange<T> {
-    type Item = Range<T>;
+impl<HK> Iterator for ShiftRange<HK> where HK: HintKind {
+    type Item = Iter<i32, HK>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match (self.start_iter.next(), self.end_iter.next()) {
-            (Some(start), Some(end)) => Some(start..end),
-            _ => None
+        if self.iter_count == 0 {
+            return None;
         }
+
+        let iter = Iter::new(self.range_start..self.range_end, self.hint_kind);
+
+        self.range_start += self.start_step as i32;
+        self.range_end += self.end_step as i32;
+        self.iter_count -= 1;
+
+        Some(iter)
     }
 }
 
-impl<T, HK> gc::Arbitrary for ShiftRange<T> {}
+impl<HK> qc::Arbitrary for ShiftRange<HK>
+    where HK: HintKind
+{
+    fn arbitrary<G: qc::Gen>(g: &mut G) -> Self {
+        const MAX_STARTING_RANGE_DIFF: i32 = 32;
+        const MAX_STEP_MODULO: i32 = 8;
+        const MAX_ITER_COUNT: u32 = 3;
+
+        let range_start = qc::Arbitrary::arbitrary(g);
+        let range_end = range_start + g.gen_range(0, MAX_STARTING_RANGE_DIFF + 1);
+        let start_step = g.gen_range(-MAX_STEP_MODULO, MAX_STEP_MODULO + 1);
+        let end_step = g.gen_range(-MAX_STEP_MODULO, MAX_STEP_MODULO + 1);
+        let iter_count = g.gen_range(0, MAX_ITER_COUNT + 1);
+        let hint_kind = qc::Arbitrary::arbitrary(g);
+
+        ShiftRange {
+            range_start,
+            range_end,
+            start_step,
+            end_step,
+            iter_count,
+            hint_kind
+        }
+    }
+}
 
 fn correct_size_hint<I: Iterator>(mut it: I) -> bool {
     // record size hint at each iteration
@@ -327,6 +353,10 @@ quickcheck! {
     }
     fn size_product3(a: Iter<u16>, b: Iter<u16>, c: Iter<u16>) -> bool {
         correct_size_hint(iproduct!(a, b, c))
+    }
+
+    fn size_multi_product(a: ShiftRange) -> bool {
+        correct_size_hint(a.multi_cartesian_product())
     }
 
     fn correct_cartesian_product3(a: Iter<u16>, b: Iter<u16>, c: Iter<u16>,
