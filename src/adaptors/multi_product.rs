@@ -3,6 +3,7 @@
 use size_hint;
 use Itertools;
 
+#[derive(Clone)]
 /// An iterator adaptor that iterates over the cartesian product of
 /// multiple iterators of type `I`.
 ///
@@ -28,6 +29,7 @@ pub fn multi_cartesian_product<H>(iters: H) -> MultiProduct<<H::Item as IntoIter
     MultiProduct(iters.map(|i| MultiProductIter::new(i.into_iter())).collect())
 }
 
+#[derive(Clone)]
 /// Holds the state of a single iterator within a MultiProduct.
 struct MultiProductIter<I>
     where I: Iterator + Clone,
