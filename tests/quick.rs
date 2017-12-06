@@ -401,6 +401,8 @@ quickcheck! {
             multi_product.fold((), |(), elt| actual.push(elt));
         }
         assert_eq!(answer, actual);
+
+        assert_eq!(answer.into_iter().last(), a.clone().multi_cartesian_product().last());
     }
 
     fn size_step(a: Iter<i16, Exact>, s: usize) -> bool {
