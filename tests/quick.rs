@@ -357,13 +357,6 @@ quickcheck! {
         correct_size_hint(iproduct!(a, b, c))
     }
 
-    fn size_multi_product(a: ShiftRange) -> bool {
-        correct_size_hint(a.multi_cartesian_product())
-    }
-    fn exact_size_multi_product(a: ShiftRange<Exact>) -> bool {
-        exact_size(a.multi_cartesian_product())
-    }
-
     fn correct_cartesian_product3(a: Iter<u16>, b: Iter<u16>, c: Iter<u16>,
                                   take_manual: usize) -> ()
     {
@@ -379,6 +372,33 @@ quickcheck! {
         actual.extend((&mut product_iter).take(take_manual));
         if actual.len() == take_manual {
             product_iter.fold((), |(), elt| actual.push(elt));
+        }
+        assert_eq!(answer, actual);
+    }
+
+    fn size_multi_product(a: ShiftRange) -> bool {
+        correct_size_hint(a.multi_cartesian_product())
+    }
+    fn exact_size_multi_product(a: ShiftRange<Exact>) -> bool {
+        exact_size(a.multi_cartesian_product())
+    }
+    fn correct_multi_product3(a: ShiftRange, take_manual: usize) -> () {
+        // Fix no. of iterators at 3
+        let a = ShiftRange { iter_count: 3, ..a };
+
+        // test correctness of MultiProduct through regular iteration (take)
+        // and through fold.
+        let mut iters = a.clone();
+        let i0 = iters.next().unwrap();
+        let i1r = &iters.next().unwrap();
+        let i2r = &iters.next().unwrap();
+        let answer: Vec<_> = i0.flat_map(move |ei0| i1r.clone().flat_map(move |ei1| i2r.clone().map(move |ei2| vec![ei0, ei1, ei2]))).collect();
+        let mut multi_product = a.clone().multi_cartesian_product();
+        let mut actual = Vec::new();
+
+        actual.extend((&mut multi_product).take(take_manual));
+        if actual.len() == take_manual {
+            multi_product.fold((), |(), elt| actual.push(elt));
         }
         assert_eq!(answer, actual);
     }
