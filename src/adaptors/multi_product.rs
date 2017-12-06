@@ -214,3 +214,8 @@ impl<I> Iterator for MultiProduct<I>
         }
     }
 }
+
+impl<I> ExactSizeIterator for MultiProduct<I>
+    where I: ExactSizeIterator + Clone,
+          I::Item: Clone
+{ }
