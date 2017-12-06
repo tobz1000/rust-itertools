@@ -217,6 +217,8 @@ impl<HK> Iterator for ShiftRange<HK> where HK: HintKind {
     }
 }
 
+impl ExactSizeIterator for ShiftRange<Exact> { }
+
 impl<HK> qc::Arbitrary for ShiftRange<HK>
     where HK: HintKind
 {
@@ -357,6 +359,9 @@ quickcheck! {
 
     fn size_multi_product(a: ShiftRange) -> bool {
         correct_size_hint(a.multi_cartesian_product())
+    }
+    fn exact_size_multi_product(a: ShiftRange<Exact>) -> bool {
+        exact_size(a.multi_cartesian_product())
     }
 
     fn correct_cartesian_product3(a: Iter<u16>, b: Iter<u16>, c: Iter<u16>,
