@@ -299,6 +299,7 @@ pub fn cartesian_product<I, J>(mut i: I, j: J) -> Product<I, J>
     }
 }
 
+
 impl<I, J> Iterator for Product<I, J>
     where I: Iterator,
           J: Clone + Iterator,
@@ -335,8 +336,7 @@ impl<I, J> Iterator for Product<I, J>
         // Compute a * b_orig + b for both lower and upper bound
         size_hint::add(
             size_hint::mul(self.a.size_hint(), self.b_orig.size_hint()),
-            (b_min * has_cur, b_max.map(move |x| x * has_cur))
-        )
+            (b_min * has_cur, b_max.map(move |x| x * has_cur)))
     }
 
     fn fold<Acc, G>(mut self, mut accum: Acc, mut f: G) -> Acc

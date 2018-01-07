@@ -209,8 +209,8 @@ impl<HK> Iterator for ShiftRange<HK> where HK: HintKind {
 
         let iter = Iter::new(self.range_start..self.range_end, self.hint_kind);
 
-        self.range_start += self.start_step as i32;
-        self.range_end += self.end_step as i32;
+        self.range_start += self.start_step;
+        self.range_end += self.end_step;
         self.iter_count -= 1;
 
         Some(iter)
@@ -378,9 +378,6 @@ quickcheck! {
 
     fn size_multi_product(a: ShiftRange) -> bool {
         correct_size_hint(a.multi_cartesian_product())
-    }
-    fn exact_size_multi_product(a: ShiftRange<Exact>) -> bool {
-        exact_size(a.multi_cartesian_product())
     }
     fn correct_multi_product3(a: ShiftRange, take_manual: usize) -> () {
         // Fix no. of iterators at 3
