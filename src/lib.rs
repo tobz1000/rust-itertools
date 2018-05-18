@@ -201,6 +201,30 @@ macro_rules! iproduct {
     ($I:expr, $J:expr, $($K:expr),+) => (
         iproduct!(@flatten iproduct!($I, $J), $($K,)+)
     );
+    ($I:expr; 1) => (
+        iproduct!($I)
+    );
+    ($I:expr; 2) => (
+        iproduct!($I, $I)
+    );
+    ($I:expr; 3) => (
+        iproduct!($I, $I, $I)
+    );
+    ($I:expr; 4) => (
+        iproduct!($I, $I, $I, $I)
+    );
+    ($I:expr; 5) => (
+        iproduct!($I, $I, $I, $I, $I)
+    );
+    ($I:expr; 6) => (
+        iproduct!($I, $I, $I, $I, $I, $I)
+    );
+    ($I:expr; 7) => (
+        iproduct!($I, $I, $I, $I, $I, $I, $I)
+    );
+    ($I:expr; 8) => (
+        iproduct!($I, $I, $I, $I, $I, $I, $I, $I)
+    );
 }
 
 #[macro_export]
