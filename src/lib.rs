@@ -201,30 +201,18 @@ macro_rules! iproduct {
     ($I:expr, $J:expr, $($K:expr),+) => (
         iproduct!(@flatten iproduct!($I, $J), $($K,)+)
     );
-    ($I:expr; 1) => (
-        iproduct!($I)
-    );
-    ($I:expr; 2) => (
-        iproduct!($I, $I)
-    );
-    ($I:expr; 3) => (
-        iproduct!($I, $I, $I)
-    );
-    ($I:expr; 4) => (
-        iproduct!($I, $I, $I, $I)
-    );
-    ($I:expr; 5) => (
-        iproduct!($I, $I, $I, $I, $I)
-    );
-    ($I:expr; 6) => (
-        iproduct!($I, $I, $I, $I, $I, $I)
-    );
-    ($I:expr; 7) => (
-        iproduct!($I, $I, $I, $I, $I, $I, $I)
-    );
-    ($I:expr; 8) => (
-        iproduct!($I, $I, $I, $I, $I, $I, $I, $I)
-    );
+    (@repeat $I:expr; r $($(@$r:tt)* r)*) => ({
+        let i = $I;
+        iproduct!($($(@$r:tt)* i.clone(),)* i)
+    });
+    ($I:expr; 1) => (iproduct!(@repeat $I; r));
+    ($I:expr; 2) => (iproduct!(@repeat $I; r r));
+    ($I:expr; 3) => (iproduct!(@repeat $I; r r r));
+    ($I:expr; 4) => (iproduct!(@repeat $I; r r r r));
+    ($I:expr; 5) => (iproduct!(@repeat $I; r r r r r));
+    ($I:expr; 6) => (iproduct!(@repeat $I; r r r r r r));
+    ($I:expr; 7) => (iproduct!(@repeat $I; r r r r r r r));
+    ($I:expr; 8) => (iproduct!(@repeat $I; r r r r r r r r));
 }
 
 #[macro_export]
