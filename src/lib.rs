@@ -167,10 +167,12 @@ mod ziptuple;
 /// Iterator element type is like `(A, B, ..., E)` if formed
 /// from iterators `(I, J, ..., M)` with element types `I::Item = A`, `J::Item = B`, etc.
 ///
+/// A maximum of 8 iterators can be specified.
+///
 /// Iterators can are specified in a comma-separated list. Or, if all iterators
 /// are identical and implement `Clone`, they can be specified with the shorthand
 /// `iterator; count`.
-/// 
+///
 /// ```
 /// #[macro_use] extern crate itertools;
 /// # fn main() {
@@ -179,7 +181,7 @@ mod ziptuple;
 /// for (i, j, k) in iproduct!(0..3, 0..4, 0..5) {
 ///    // ..
 /// }
-/// 
+///
 /// // Short-form when all iterators are identical
 /// for (i, j, k) in iproduct!(0..4; 3) {
 ///    //..
