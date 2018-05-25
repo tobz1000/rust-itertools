@@ -713,6 +713,24 @@ fn multi_cartesian_product_fold(b: &mut test::Bencher)
 }
 
 #[bench]
+fn multi_cartesian_product_ref_iterator(b: &mut test::Bencher)
+{
+    let xs = [vec![0; 16], vec![0; 16], vec![0; 16]];
+
+    b.iter(|| {
+        let mut sum = 0;
+        let mut iter = xs.into_iter().multi_cartesian_product_ref();
+
+        while let Some(x) = iter.next() {
+            sum += x[0];
+            sum += x[1];
+            sum += x[2];
+        }
+        sum
+    })
+}
+
+#[bench]
 fn cartesian_product_nested_for(b: &mut test::Bencher)
 {
     let xs = vec![0; 16];
