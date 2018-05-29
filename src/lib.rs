@@ -25,11 +25,13 @@
 #![doc(html_root_url="https://docs.rs/itertools/0.7/")]
 
 extern crate either;
+extern crate streaming_iterator;
 
 #[cfg(not(feature = "use_std"))]
 extern crate core as std;
 
 pub use either::Either;
+pub use streaming_iterator::StreamingIterator;
 
 #[cfg(feature = "use_std")]
 use std::collections::HashMap;
@@ -70,7 +72,7 @@ pub mod structs {
         Update,
     };
     #[cfg(feature = "use_std")]
-    pub use adaptors::{MultiProduct, MultiProductRef};
+    pub use adaptors::MultiProduct;
     #[cfg(feature = "use_std")]
     pub use combinations::Combinations;
     pub use cons_tuples_impl::ConsTuples;
@@ -831,15 +833,6 @@ pub trait Itertools : Iterator {
               <Self::Item as IntoIterator>::Item: Clone
     {
         adaptors::multi_cartesian_product(self)
-    }
-
-    #[cfg(feature = "use_std")]
-    fn multi_cartesian_product_ref(self) -> MultiProductRef<<Self::Item as IntoIterator>::IntoIter>
-        where Self: Iterator + Sized,
-              Self::Item: IntoIterator,
-              <Self::Item as IntoIterator>::IntoIter: Clone
-    {
-        adaptors::multi_cartesian_product_ref(self)
     }
 
     /// Return an iterator adaptor that uses the passed-in closure to

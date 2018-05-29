@@ -5,10 +5,8 @@
 //! except according to those terms.
 
 mod multi_product;
-mod multi_product_ref;
 #[cfg(feature = "use_std")]
 pub use self::multi_product::*;
-pub use self::multi_product_ref::*;
 
 use std::fmt;
 use std::mem::replace;
