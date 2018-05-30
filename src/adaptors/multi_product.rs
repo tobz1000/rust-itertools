@@ -3,6 +3,7 @@
 use size_hint;
 use Itertools;
 use streaming_iterator::StreamingIterator;
+use std::marker::PhantomData;
 
 #[derive(Clone)]
 /// An iterator adaptor that iterates over the cartesian product of
@@ -21,6 +22,9 @@ pub struct MultiProduct<I>
 }
 
 pub struct MultiProductStreaming<I>(MultiProduct<I>)
+    where I: Iterator + Clone;
+
+pub struct MultiProductArray<I, A>(MultiProduct<I>, PhantomData<A>)
     where I: Iterator + Clone;
 
 /// Create a new cartesian product iterator over an arbitrary number
@@ -59,6 +63,10 @@ impl<I> MultiProduct<I>
 {
     pub fn streaming(self) -> MultiProductStreaming<I> {
         MultiProductStreaming(self)
+    }
+
+    pub fn array<A>(self) -> MultiProductArray<I, A> {
+        MultiProductArray(self, PhantomData::<A>)
     }
 
     fn initial_iteration(
@@ -171,21 +179,6 @@ impl<I> MultiProduct<I>
             }
         )
     }
-
-    fn _last(self) -> Option<Vec<I::Item>> {
-        let iter_count = self.iters.len();
-
-        let lasts: Vec<I::Item> = self.iters.into_iter()
-            .map(|multi_iter| multi_iter.iter.last())
-            .while_some()
-            .collect();
-
-        if lasts.len() == iter_count {
-            Some(lasts)
-        } else {
-            None
-        }
-    }
 }
 
 impl<I> Iterator for MultiProduct<I>
@@ -213,7 +206,18 @@ impl<I> Iterator for MultiProduct<I>
     }
 
     fn last(self) -> Option<Self::Item> {
-        self._last()
+        let iter_count = self.iters.len();
+
+        let lasts: Vec<I::Item> = self.iters.into_iter()
+            .map(|multi_iter| multi_iter.iter.last())
+            .while_some()
+            .collect();
+
+        if lasts.len() == iter_count {
+            Some(lasts)
+        } else {
+            None
+        }
     }
 }
 
@@ -241,4 +245,53 @@ impl<I> StreamingIterator for MultiProductStreaming<I>
     fn size_hint(&self) -> (usize, Option<usize>) {
         self.0._size_hint()
     }
+}
+
+macro_rules! multi_product_array_impl {
+    ($N:expr, $($M:expr,)*) => {
+        multi_product_array_impl!($($M,)*);
+
+        impl<I, _A> Iterator for MultiProductArray<I, [_A; $N]>
+            where I: Iterator + Clone,
+                  I::Item: Clone
+        {
+            type Item = [I::Item; $N];
+
+            fn next(&mut self) -> Option<Self::Item> {
+                self.0.advance();
+
+                if let Some(ref cur) = self.0.cur {
+                    let ptr = cur.as_ptr() as *const Self::Item;
+                    let arr_ref = unsafe { &*ptr };
+                    Some(arr_ref.clone())
+                } else {
+                    None
+                }
+            }
+
+            fn count(self) -> usize {
+                self.0._count()
+            }
+
+            fn size_hint(&self) -> (usize, Option<usize>) {
+                self.0._size_hint()
+            }
+
+            fn last(self) -> Option<Self::Item> {
+                let mut _lasts = self.0.iters.into_iter()
+                    .map(|multi_iter| multi_iter.iter.last())
+                    .while_some();
+
+                Some([ $({ $M; _lasts.next()? },)* ])
+            }
+        }
+    };
+    () => {};
+}
+
+multi_product_array_impl!{
+    32, 31, 30,
+    29, 28, 27, 26, 25, 24, 23, 22, 21, 20,
+    19, 18, 17, 16, 15, 14, 13, 12, 11, 10,
+    9,  8,  7,  6,  5,  4,  3,  2,  1,  0,
 }

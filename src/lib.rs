@@ -206,6 +206,22 @@ macro_rules! iproduct {
 }
 
 #[macro_export]
+macro_rules! iproduct_arr {
+    (@count $($I:expr, $(@$_:tt)*)*) => {
+        0 $(+ $($_)* 1 )*
+    };
+    (@prod $iter:expr, $N:expr) => {
+        $crate::Itertools::multi_cartesian_product($iter).array::<[(); $N]>()
+    };
+    ($($I:expr),*) => {
+        iproduct_arr!(@prod vec![$($I),*].into_iter(), iproduct_arr!(@count $($I,)*))
+    };
+    ($I:expr; $N:expr) => {
+        iproduct_arr!(@prod $crate::repeat_n($I, $N), $N)
+    };
+}
+
+#[macro_export]
 /// Create an iterator running multiple iterators in lockstep.
 ///
 /// The `izip!` iterator yields elements until any subiterator

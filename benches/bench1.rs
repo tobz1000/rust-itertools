@@ -733,6 +733,22 @@ fn multi_cartesian_product_streaming_iterator(b: &mut test::Bencher)
 }
 
 #[bench]
+fn multi_cartesian_product_array_iterator(b: &mut test::Bencher)
+{
+    let xs = vec![0; 16];
+
+    b.iter(|| {
+        let mut sum = 0;
+        for x in iproduct_arr![&xs; 3] {
+            sum += x[0];
+            sum += x[1];
+            sum += x[2];
+        }
+        sum
+    })
+}
+
+#[bench]
 fn cartesian_product_nested_for(b: &mut test::Bencher)
 {
     let xs = vec![0; 16];
