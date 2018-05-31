@@ -169,12 +169,19 @@ mod ziptuple;
 /// Iterator element type is like `(A, B, ..., E)` if formed
 /// from iterators `(I, J, ..., M)` with element types `I::Item = A`, `J::Item = B`, etc.
 ///
+/// Iterators are specified in a comma-separated list. A maxmimum of 8 iterators
+/// can be specified.
+///
 /// ```
 /// #[macro_use] extern crate itertools;
 /// # fn main() {
-/// // Iterate over the coordinates of a 4 x 4 x 4 grid
-/// // from (0, 0, 0), (0, 0, 1), .., (0, 1, 0), (0, 1, 1), .. etc until (3, 3, 3)
-/// for (i, j, k) in iproduct!(0..4, 0..4, 0..4) {
+/// let symbols = ['α', 'β'];
+/// let words = ["alpha", "bravo"];
+/// let numbers = [20, 30];
+/// 
+/// // Iterate over all combinations of elements from each iterator
+/// // from ('α', "alpha", 20), ('α', "alpha", 30), .. until ('β', "bravo", 30)
+/// for (symbol, word, num) in iproduct!(&symbols, &words, &numbers) {
 ///    // ..
 /// }
 /// # }
@@ -209,6 +216,40 @@ macro_rules! iproduct {
 }
 
 #[macro_export]
+/// Creates an iterator over the "cartesian product" of iterators, where each
+/// iterator it of the same type.
+///
+/// Iterator element type is `[I::Item; N]`, where I is type of the
+/// sub-iterators, and `N` is the number of sub-iterators.
+///
+/// Iterators can be specified in a comma separated list. Or, if all iterators
+/// are identical and implement `Clone`, they can be specified with the
+/// shorthand `[iterator; N]` syntax, similar to `vec!` and array literals. A
+/// maximum of 32 iterators can be specified.
+///
+/// ```
+/// #[macro_use] extern crate itertools;
+/// # fn main() {
+/// // Iterate over the coordinates of a 3 x 4 x 5 grid
+/// // from [0, 0, 0], [0, 0, 1], .., [0, 1, 0], [0, 1, 1], .. etc until [2, 3, 4]
+/// for [i, j, k] in iproduct_arr![0..3, 0..4, 0..5] {
+///    // ..
+/// }
+///
+/// // Short-form when all iterators are identical
+/// for [i, j, k] in iproduct_arr![0..4; 3] {
+///    //..
+/// }
+/// # }
+/// ```
+/// 
+/// **Note:** To enable the macros in this crate, use the `#[macro_use]`
+/// attribute when importing the crate:
+///
+/// ```
+/// #[macro_use] extern crate itertools;
+/// # fn main() { }
+/// ```
 macro_rules! iproduct_arr {
     (@count $($I:expr, $(@$_:tt)*)*) => {
         0 $(+ $($_)* 1 )*
