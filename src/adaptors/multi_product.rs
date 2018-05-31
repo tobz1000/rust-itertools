@@ -73,15 +73,10 @@ struct MultiProductIter<I>
 impl<I> MultiProduct<I>
     where I: Iterator + Clone
 {
-    /// Converts the `MultiProduct` into a
-    /// [`MultiProductStreaming`](struct.MultiProductStreaming), which yields
-    /// items as a slice reference, rather than an allocated `Vec`.
     pub fn streaming(self) -> MultiProductStreaming<I> {
         MultiProductStreaming(self)
     }
 
-    /// Converts the `MultiProduct` into a
-    /// [`MultiProductArray`](struct.MultiProductArray).
     pub fn array<A>(self) -> MultiProductArray<I, A> {
         MultiProductArray(self, PhantomData::<A>)
     }

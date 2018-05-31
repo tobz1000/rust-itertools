@@ -72,7 +72,7 @@ pub mod structs {
         Update,
     };
     #[cfg(feature = "use_std")]
-    pub use adaptors::MultiProduct;
+    pub use adaptors::{MultiProduct, MultiProductArray};
     #[cfg(feature = "use_std")]
     pub use combinations::Combinations;
     pub use cons_tuples_impl::ConsTuples;
