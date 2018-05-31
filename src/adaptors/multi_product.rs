@@ -103,10 +103,10 @@ impl<I> MultiProduct<I>
         *last_cur = if let Some(next) = last.iter.next() {
             next
         } else {
+            last.iter = last.iter_orig.clone();
+
             // Propagate failures from further multi_iters
             Self::iterate_last(rest, rest_curs)?;
-
-            last.iter = last.iter_orig.clone();
 
             // If restarted iter returns None, it is empty, therefore whole
             // product is empty; finish.
