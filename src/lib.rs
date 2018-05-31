@@ -197,6 +197,9 @@ macro_rules! iproduct {
     ($I:expr) => (
         $crate::__std_iter::IntoIterator::into_iter($I)
     );
+    ($($I:expr,)+) => {
+        iproduct!($($I),+)
+    };
     ($I:expr, $J:expr) => (
         $crate::Itertools::cartesian_product(iproduct!($I), iproduct!($J))
     );
@@ -213,8 +216,11 @@ macro_rules! iproduct_arr {
     (@prod $iter:expr, $N:expr) => {
         $crate::Itertools::multi_cartesian_product($iter).array::<[(); $N]>()
     };
-    ($($I:expr),*) => {
-        iproduct_arr!(@prod vec![$($I),*].into_iter(), iproduct_arr!(@count $($I,)*))
+    ($($I:expr,)+) => {
+        iproduct_arr!($($I),+)
+    };
+    ($($I:expr),+) => {
+        iproduct_arr!(@prod vec![$($I),+].into_iter(), iproduct_arr!(@count $($I,)+))
     };
     ($I:expr; $N:expr) => {
         iproduct_arr!(@prod $crate::repeat_n($I, $N), $N)
