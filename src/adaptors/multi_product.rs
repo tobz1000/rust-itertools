@@ -121,6 +121,10 @@ impl<I> MultiProduct<I>
     }
 
     fn advance(&mut self) {
+        if self.iters.len() == 0 {
+            return;
+        }
+
         let mut finished = false;
 
         match self.cur {
