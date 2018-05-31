@@ -117,7 +117,7 @@ impl<I> MultiProduct<I>
     }
 
     fn in_progress(&self) -> bool {
-        self.cur.is_none()
+        self.cur.is_some()
     }
 
     fn advance(&mut self) {
