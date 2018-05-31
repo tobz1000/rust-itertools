@@ -178,7 +178,7 @@ mod ziptuple;
 /// let symbols = ['α', 'β'];
 /// let words = ["alpha", "bravo"];
 /// let numbers = [20, 30];
-/// 
+///
 /// // Iterate over all combinations of elements from each iterator
 /// // from ('α', "alpha", 20), ('α', "alpha", 30), .. until ('β', "bravo", 30)
 /// for (symbol, word, num) in iproduct!(&symbols, &words, &numbers) {
@@ -242,7 +242,12 @@ macro_rules! iproduct {
 /// }
 /// # }
 /// ```
-/// 
+///
+/// If the number of sub-iterators is not known at compile time, use
+/// [`.multi_cartesian_product()`](trait.Itertools.html#method.multi_cartesian_product)
+/// instead. If each sub-iterator is of a different type, use the
+/// [`iproduct`](macro.iproduct.html) macro.
+///
 /// **Note:** To enable the macros in this crate, use the `#[macro_use]`
 /// attribute when importing the crate:
 ///

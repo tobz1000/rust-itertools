@@ -9,7 +9,7 @@ use std::marker::PhantomData;
 /// An iterator adaptor that iterates over the cartesian product of
 /// multiple iterators of type `I`.
 ///
-/// An iterator element type is `Vec<I>`.
+/// An iterator element type is `Vec<I::Item>`.
 ///
 /// See [`.multi_cartesian_product()`](../trait.Itertools.html#method.multi_cartesian_product)
 /// for more information.
@@ -24,6 +24,18 @@ pub struct MultiProduct<I>
 pub struct MultiProductStreaming<I>(MultiProduct<I>)
     where I: Iterator + Clone;
 
+/// An iterator adaptor that iterates over the cartesian product of
+/// multiple iterators of type `I`.
+///
+/// An iterator element type is `[I::Item; N]`, where `N` is the number of
+/// sub-iterators.
+///
+/// Type `A` is a dummy array type, the length of which is used to determine the
+/// length of yielded items when iterating. The array item component of `A` is
+/// not used.
+///
+/// See [`iproduct_arr`](../macro.iproduct_arr.html) for more information.
+#[must_use = "iterator adaptors are lazy and do nothing unless consumed"]
 pub struct MultiProductArray<I, A>(MultiProduct<I>, PhantomData<A>)
     where I: Iterator + Clone;
 
@@ -61,20 +73,15 @@ struct MultiProductIter<I>
 impl<I> MultiProduct<I>
     where I: Iterator + Clone
 {
-    /// Creates a `MultiProductStreaming`, which yields items as a slice
-    /// reference, rather than an allocated `Vec`.
+    /// Converts the `MultiProduct` into a
+    /// [`MultiProductStreaming`](struct.MultiProductStreaming), which yields
+    /// items as a slice reference, rather than an allocated `Vec`.
     pub fn streaming(self) -> MultiProductStreaming<I> {
         MultiProductStreaming(self)
     }
 
-    /// Creates a `MultiProductArray`, which yields items items as an array.
-    ///
-    /// Type `A` is a dummy array type, the length of which is used to determine
-    /// the the length of yielded items when iterating. The array item component
-    /// of `A` is not used.
-    /// 
-    /// See [`iproduct_arr!`](../macro.iproduct_arr.html)
-    /// for more information.
+    /// Converts the `MultiProduct` into a
+    /// [`MultiProductArray`](struct.MultiProductArray).
     pub fn array<A>(self) -> MultiProductArray<I, A> {
         MultiProductArray(self, PhantomData::<A>)
     }

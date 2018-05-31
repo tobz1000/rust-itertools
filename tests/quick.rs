@@ -322,7 +322,7 @@ fn size_range_u8(a: Iter<u8>) -> bool {
 }
  */
 
-fn _correct_product3<I, P>(a: ShiftRange, take_manual: usize, to_product: fn(a: ShiftRange) -> P, to_elt: fn(i: i32, j: i32, k: i32) -> I) 
+fn _correct_product3<I, P>(a: ShiftRange, take_manual: usize, to_product: fn(a: ShiftRange) -> P, to_elt: fn(i: i32, j: i32, k: i32) -> I)
     where I: PartialEq + Debug,
             P: Iterator<Item=I>
 {
