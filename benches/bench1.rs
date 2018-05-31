@@ -2,11 +2,9 @@
 
 extern crate test;
 #[macro_use] extern crate itertools;
-extern crate streaming_iterator;
 
 use test::{black_box};
 use itertools::Itertools;
-use streaming_iterator::StreamingIterator;
 
 use itertools::free::cloned;
 
@@ -710,24 +708,6 @@ fn multi_cartesian_product_fold(b: &mut test::Bencher)
             sum += x[1];
             sum += x[2];
         });
-        sum
-    })
-}
-
-#[bench]
-fn multi_cartesian_product_streaming_iterator(b: &mut test::Bencher)
-{
-    let xs = [vec![0; 16], vec![0; 16], vec![0; 16]];
-
-    b.iter(|| {
-        let mut sum = 0;
-        let mut iter = xs.into_iter().multi_cartesian_product().streaming();
-
-        while let Some(x) = iter.next() {
-            sum += x[0];
-            sum += x[1];
-            sum += x[2];
-        }
         sum
     })
 }

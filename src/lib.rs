@@ -25,13 +25,11 @@
 #![doc(html_root_url="https://docs.rs/itertools/0.7/")]
 
 extern crate either;
-extern crate streaming_iterator;
 
 #[cfg(not(feature = "use_std"))]
 extern crate core as std;
 
 pub use either::Either;
-pub use streaming_iterator::StreamingIterator;
 
 #[cfg(feature = "use_std")]
 use std::collections::HashMap;
