@@ -61,14 +61,26 @@ struct MultiProductIter<I>
 impl<I> MultiProduct<I>
     where I: Iterator + Clone
 {
+    /// Creates a `MultiProductStreaming`, which yields items as a slice
+    /// reference, rather than an allocated `Vec`.
     pub fn streaming(self) -> MultiProductStreaming<I> {
         MultiProductStreaming(self)
     }
 
+    /// Creates a `MultiProductArray`, which yields items items as an array.
+    ///
+    /// Type `A` is a dummy array type, the length of which is used to determine
+    /// the the length of yielded items when iterating. The array item component
+    /// of `A` is not used.
+    /// 
+    /// See [`iproduct_arr!`](../macro.iproduct_arr.html)
+    /// for more information.
     pub fn array<A>(self) -> MultiProductArray<I, A> {
         MultiProductArray(self, PhantomData::<A>)
     }
 
+    /// Returns first item of each iterator as a `Vec`, or None if any iterator
+    /// is empty.
     fn initial_iteration(
         multi_iters: &mut [MultiProductIter<I>]
     ) -> Option<Vec<I::Item>> {
@@ -89,7 +101,7 @@ impl<I> MultiProduct<I>
     /// Iterates the rightmost iterator, then recursively iterates iterators
     /// to the left if necessary.
     ///
-    /// Returns true if the iteration succeeded, else false.
+    /// Returns Some(()) if the iteration succeeded, else None.
     fn iterate_last(
         multi_iters: &mut [MultiProductIter<I>],
         curs: &mut [I::Item]
