@@ -2,6 +2,7 @@
 
 use size_hint;
 use Itertools;
+use streaming_iterator::StreamingIterator;
 use std::marker::PhantomData;
 
 #[derive(Clone)]
@@ -20,6 +21,8 @@ pub struct MultiProduct<I>
     cur: Option<Vec<I::Item>>,
 }
 
+pub struct MultiProductStreaming<I>(MultiProduct<I>)
+    where I: Iterator + Clone;
 
 /// An iterator adaptor that iterates over the cartesian product of
 /// multiple iterators of type `I`.
@@ -70,6 +73,10 @@ struct MultiProductIter<I>
 impl<I> MultiProduct<I>
     where I: Iterator + Clone
 {
+    pub fn streaming(self) -> MultiProductStreaming<I> {
+        MultiProductStreaming(self)
+    }
+
     /// Converts this iterator into one which yields arrays instead of `Vec`s.
     /// 
     /// Type `A` is a dummy array type, the length of which is used to determine
@@ -248,6 +255,32 @@ impl<I> Iterator for MultiProduct<I>
         } else {
             None
         }
+    }
+}
+
+impl<I> StreamingIterator for MultiProductStreaming<I>
+    where I: Iterator + Clone
+{
+    type Item = [I::Item];
+
+    fn advance(&mut self) {
+        self.0.advance()
+    }
+
+    fn get(&self) -> Option<&Self::Item> {
+        if let Some(ref cur) = self.0.cur {
+            Some(cur)
+        } else {
+            None
+        }
+    }
+
+    fn count(self) -> usize {
+        self.0._count()
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.0._size_hint()
     }
 }
 
