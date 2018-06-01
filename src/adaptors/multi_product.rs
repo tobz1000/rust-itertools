@@ -70,8 +70,27 @@ struct MultiProductIter<I>
 impl<I> MultiProduct<I>
     where I: Iterator + Clone
 {
-    pub fn array<A>(self) -> MultiProductArray<I, A> {
-        MultiProductArray(self, PhantomData::<A>)
+    /// Converts this iterator into one which yields arrays instead of `Vec`s.
+    /// 
+    /// Type `A` is a dummy array type, the length of which is used to determine
+    /// the length of yielded items when iterating. If the number of
+    /// sub-iterators does not match the length of type `A`, it will `panic`.
+    /// 
+    /// The array item component of `A` is not used.
+    /// 
+    /// ```
+    /// use itertools::Itertools;
+    /// let mut multi_prod_array = (0..3).map(|_| 4..6);
+    /// ```
+    /// 
+    /// In most instances, it is preferable to use the
+    /// [`iproduct_arr`](../macro.iproduct_arr.html).
+    pub fn array<A>(self) -> MultiProductArray<I, A>
+        where MultiProductArray<I, A>: AssertIterLength
+    {
+        let prod = MultiProductArray(self, PhantomData::<A>);
+        prod.assert_iter_length();
+        prod
     }
 
     /// Returns first item of each iterator as a `Vec`, or None if any iterator
@@ -232,7 +251,13 @@ impl<I> Iterator for MultiProduct<I>
     }
 }
 
-
+/// A trait to check that the number of iterators provided to a
+/// `MultiProductArray` is correct.
+pub trait AssertIterLength {
+    /// Asserts that the number of iterators matches the length of the Item
+    /// type.
+    fn assert_iter_length(&self);
+}
 
 macro_rules! multi_product_array_impl {
     ($N:expr, $($M:expr,)*) => {
@@ -248,6 +273,7 @@ macro_rules! multi_product_array_impl {
                 self.0.advance();
 
                 if let Some(ref cur) = self.0.cur {
+                    // `cur` length ensured by AssertIterLength
                     let ptr = cur.as_ptr() as *const Self::Item;
                     let arr_ref = unsafe { &*ptr };
                     Some(arr_ref.clone())
@@ -270,6 +296,18 @@ macro_rules! multi_product_array_impl {
                     .while_some();
 
                 Some([ $({ $M; _lasts.next()? },)* ])
+            }
+        }
+
+        impl<I, _A> AssertIterLength for MultiProductArray<I, [_A; $N]>
+            where I: Iterator + Clone
+        {
+            fn assert_iter_length(&self) {
+                let len = self.0.iters.len();
+                if len != $N {
+                    panic!("MultiProductArray constructed with incorrect \
+                    number of iterators; iters={} arraylen={}", len, $N);
+                }
             }
         }
     };
