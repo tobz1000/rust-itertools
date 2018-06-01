@@ -29,6 +29,35 @@ fn product3() {
 }
 
 #[test]
+fn productn_repeat() {
+    let prod = iproduct!(0..4; 1);
+    let exp = iproduct!(0..4);
+    assert_eq!(prod.collect_vec(), exp.collect_vec());
+
+    let prod = iproduct!(0..4; 2);
+    let exp = iproduct!(0..4, 0..4);
+    assert_eq!(prod.collect_vec(), exp.collect_vec());
+
+    let prod = iproduct!(0..4; 3);
+    let exp = iproduct!(0..4, 0..4, 0..4);
+    assert_eq!(prod.collect_vec(), exp.collect_vec());
+
+    let prod = iproduct!(0..4; 4);
+    let exp = iproduct!(0..4, 0..4, 0..4, 0..4);
+    assert_eq!(prod.collect_vec(), exp.collect_vec());
+
+    let prod = iproduct!(0..4; 8);
+    let exp = iproduct!(0..4, 0..4, 0..4, 0..4, 0..4, 0..4, 0..4, 0..4);
+    assert_eq!(prod.collect_vec(), exp.collect_vec());
+
+    let mut i = 0;
+    let prod = iproduct!({ i += 1; i..5 }; 3);
+    let exp = iproduct!(1..5, 1..5, 1..5);
+    assert_eq!(prod.collect_vec(), exp.collect_vec());
+    assert_eq!(i, 1);
+}
+
+#[test]
 fn interleave_shortest() {
     let v0: Vec<i32> = vec![0, 2, 4];
     let v1: Vec<i32> = vec![1, 3, 5, 7];
