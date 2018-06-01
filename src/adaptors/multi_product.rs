@@ -115,13 +115,13 @@ impl<I> MultiProduct<I>
     /// Iterates the rightmost iterator, then recursively iterates iterators
     /// to the left if necessary.
     ///
-    /// Returns `Ok(())` if the iteration succeeded, else `Err(())`.
+    /// Returns Some(()) if the iteration succeeded, else None.
     fn iterate_last(
         multi_iters: &mut [MultiProductIter<I>],
         curs: &mut [I::Item]
-    ) -> Result<(), ()> {
+    ) -> Option<()> {
         // If split fails, reached end of iterator list; all iterators finished.
-        let (last, rest) = try!(multi_iters.split_last_mut().ok_or(()));
+        let (last, rest) = multi_iters.split_last_mut()?;
 
         // Should be the same length as multi_iters
         let (last_cur, rest_curs) = curs.split_last_mut().unwrap();
@@ -132,14 +132,14 @@ impl<I> MultiProduct<I>
             last.iter = last.iter_orig.clone();
 
             // Propagate failures from further multi_iters
-            try!(Self::iterate_last(rest, rest_curs));
+            Self::iterate_last(rest, rest_curs)?;
 
             // If restarted iter returns None, it is empty, therefore whole
             // product is empty; finish.
-            try!(last.iter.next().ok_or(()))
+            last.iter.next()?
         };
 
-        Ok(())
+        Some(())
     }
 
     fn in_progress(&self) -> bool {
@@ -158,7 +158,7 @@ impl<I> MultiProduct<I>
                 self.cur = Self::initial_iteration(&mut self.iters);
             },
             Some(ref mut cur) => {
-                finished = Self::iterate_last(&mut self.iters, cur) == Err(());
+                finished = Self::iterate_last(&mut self.iters, cur) == None;
             }
         }
 
@@ -270,44 +270,32 @@ macro_rules! multi_product_array_impl {
             type Item = [I::Item; $N];
 
             fn next(&mut self) -> Option<Self::Item> {
-                (self.0).advance();
+                self.0.advance();
 
-                if let Some(ref cur) = (self.0).cur {
-                    let mut _cur_iter = cur.iter();
-                    Some([ $({
-                        $M; // Dummy macro expansion statement
-                        if let Some(c) = _cur_iter.next() {
-                            c.clone()
-                        } else {
-                            return None;
-                        }
-                    },)* ])
+                if let Some(ref cur) = self.0.cur {
+                    // `cur` length ensured by AssertIterLength
+                    let ptr = cur.as_ptr() as *const Self::Item;
+                    let arr_ref = unsafe { &*ptr };
+                    Some(arr_ref.clone())
                 } else {
                     None
                 }
             }
 
             fn count(self) -> usize {
-                (self.0)._count()
+                self.0._count()
             }
 
             fn size_hint(&self) -> (usize, Option<usize>) {
-                (self.0)._size_hint()
+                self.0._size_hint()
             }
 
             fn last(self) -> Option<Self::Item> {
-                let mut _lasts = (self.0).iters.into_iter()
+                let mut _lasts = self.0.iters.into_iter()
                     .map(|multi_iter| multi_iter.iter.last())
                     .while_some();
 
-                Some([ $({
-                    $M; // Dummy macro expansion statement
-                    if let Some(last) = _lasts.next() {
-                        last
-                    } else {
-                        return None;
-                    }
-                },)* ])
+                Some([ $({ $M; _lasts.next()? },)* ])
             }
         }
 
@@ -315,7 +303,7 @@ macro_rules! multi_product_array_impl {
             where I: Iterator + Clone
         {
             fn assert_iter_length(&self) {
-                let len = (self.0).iters.len();
+                let len = self.0.iters.len();
                 if len != $N {
                     panic!("MultiProductArray constructed with incorrect \
                     number of iterators; iters={} arraylen={}", len, $N);

@@ -254,8 +254,8 @@ macro_rules! iproduct {
 /// # fn main() { }
 /// ```
 macro_rules! iproduct_arr {
-    (@count $($I:expr, $(@$_I:tt)*)*) => {
-        0 $(+ $($_I)* 1 )*
+    (@count $($I:expr, $(@$_:tt)*)*) => {
+        0 $(+ $($_)* 1 )*
     };
     (@prod $iter:expr, $N:expr) => {
         $crate::Itertools::multi_cartesian_product($iter).array::<[(); $N]>()
