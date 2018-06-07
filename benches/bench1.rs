@@ -7,6 +7,7 @@ use test::{black_box};
 use itertools::Itertools;
 
 use itertools::free::cloned;
+use itertools::permutations;
 
 use std::iter::repeat;
 use std::cmp;
@@ -731,3 +732,24 @@ fn cartesian_product_nested_for(b: &mut test::Bencher)
         sum
     })
 }
+
+macro_rules! perms {
+    ($name:ident, $n:expr) => {
+        #[bench]
+        fn $name(b: &mut test::Bencher)
+        {
+            b.iter(|| {
+                let mut perms = permutations($n, $n / 2);
+                while let Some(_p) = perms.stream() {
+
+                }
+            })
+        }
+    };
+}
+
+perms!(perms5, 5);
+perms!(perms6, 6);
+perms!(perms7, 7);
+perms!(perms8, 8);
+perms!(perms9, 9);

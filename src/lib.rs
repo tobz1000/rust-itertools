@@ -85,6 +85,7 @@ pub mod structs {
     pub use multipeek_impl::MultiPeek;
     pub use pad_tail::PadUsing;
     pub use peeking_take_while::PeekingTakeWhile;
+    pub use permutations::Permutations;
     pub use process_results_impl::ProcessResults;
     #[cfg(feature = "use_std")]
     pub use put_back_n_impl::PutBackN;
@@ -112,6 +113,7 @@ pub use diff::Diff;
 pub use kmerge_impl::{kmerge_by};
 pub use minmax::MinMaxResult;
 pub use peeking_take_while::PeekingNext;
+pub use permutations::permutations;
 pub use process_results_impl::process_results;
 pub use repeatn::repeat_n;
 pub use sources::{repeat_call, unfold, iterate};
@@ -143,6 +145,7 @@ mod minmax;
 mod multipeek_impl;
 mod pad_tail;
 mod peeking_take_while;
+mod permutations;
 mod process_results_impl;
 #[cfg(feature = "use_std")]
 mod put_back_n_impl;
