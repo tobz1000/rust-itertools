@@ -739,8 +739,7 @@ macro_rules! perms {
         fn $name(b: &mut test::Bencher)
         {
             b.iter(|| {
-                let mut perms = permutations($n, $n / 2);
-                while let Some(_p) = perms.stream() {
+                for _ in permutations($n, $n) {
 
                 }
             })
@@ -748,8 +747,7 @@ macro_rules! perms {
     };
 }
 
+perms!(perms3, 3);
+perms!(perms4, 4);
 perms!(perms5, 5);
 perms!(perms6, 6);
-perms!(perms7, 7);
-perms!(perms8, 8);
-perms!(perms9, 9);
