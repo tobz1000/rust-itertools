@@ -1,19 +1,8 @@
 use std::iter::Product;
 
 #[derive(Debug)]
-pub struct PermutationsVec<T> {
-    vals: Vec<T>,
-    state: PermutationState
-}
-
-#[derive(Debug)]
-pub struct PermutationsRef<'a, T: 'a> {
-    vals: &'a [T],
-    state: PermutationState
-}
-
-#[derive(Debug)]
-pub struct PermutationIndices{
+pub struct Permutations<S> {
+    vals: S,
     state: PermutationState
 }
 
@@ -29,55 +18,41 @@ enum PermutationState {
     }
 }
 
-impl<T> PermutationsVec<T> {
-    pub fn new(vals: Vec<T>, k: usize) -> PermutationsVec<T> {
+pub trait PermutationSource {
+    type Item;
+
+    fn perm_to_vec(&self, perm: &[usize]) -> Vec<Self::Item>;
+
+    fn len(&self) -> usize;
+}
+
+#[derive(Debug)]
+pub struct PermutationIndicesSource(usize);
+
+impl Permutations<PermutationIndicesSource> {
+    pub fn new(n: usize, k: usize) -> Self {
+        Permutations::from_vals(PermutationIndicesSource(n), k)
+    }
+}
+
+impl<S> Permutations<S>
+    where S: PermutationSource
+{
+    pub fn from_vals(vals: S, k: usize) -> Self {
         let state = PermutationState::new(vals.len(), k);
 
-        PermutationsVec { vals, state }
+        Permutations { vals, state }
     }
 }
 
-impl<T> Iterator for PermutationsVec<T>
-    where T: Clone
+impl<S> Iterator for Permutations<S>
+    where S: PermutationSource
 {
-    type Item = Vec<T>;
+    type Item = Vec<S::Item>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let PermutationsVec { vals, state } = self;
-
-        state.stream().map(|perm| {
-            perm.into_iter().map(|&p| vals[p].clone()).collect()
-        })
-    }
-
-    fn count(self) -> usize {
-        self.state.size()
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        let size = self.state.size();
-        (size, Some(size))
-    }
-}
-
-impl<'a, T: 'a> PermutationsRef<'a, T> {
-    pub fn new(vals: &'a [T], k: usize) -> PermutationsRef<'a, T> {
-        let state = PermutationState::new(vals.len(), k);
-
-        PermutationsRef { vals, state }
-    }
-}
-
-impl<'a, T: 'a> Iterator for PermutationsRef<'a, T>
-{
-    type Item = Vec<&'a T>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let PermutationsRef { vals, state } = self;
-
-        state.stream().map(|perm| {
-            perm.into_iter().map(|&p| &vals[p]).collect()
-        })
+        let Permutations { vals, state } = self;
+        state.stream().map(|perm| vals.perm_to_vec(perm))
     }
 
     fn count(self) -> usize {
@@ -157,29 +132,40 @@ impl PermutationState {
     }
 }
 
-impl PermutationIndices {
-    pub fn new(n: usize, k: usize) -> PermutationIndices {
-        PermutationIndices { state: PermutationState::new(n, k) }
+impl PermutationSource for PermutationIndicesSource {
+    type Item = usize;
+
+    fn perm_to_vec(&self, perm: &[usize]) -> Vec<usize> {
+        perm.to_vec()
     }
 
-    pub fn stream(&mut self) -> Option<&[usize]> {
-        self.state.stream()
+    fn len(&self) -> usize {
+        self.0
     }
 }
 
-impl Iterator for PermutationIndices {
-    type Item = Vec<usize>;
+impl<T> PermutationSource for Vec<T>
+    where T: Clone
+{
+    type Item = T;
 
-    fn next(&mut self) -> Option<Self::Item> {
-        self.state.stream().map(|perm| perm.to_vec())
+    fn perm_to_vec(&self, perm: &[usize]) -> Vec<T> {
+        perm.into_iter().map(|&p| self[p].clone()).collect()
     }
 
-    fn count(self) -> usize {
-        self.state.size()
+    fn len(&self) -> usize {
+        Vec::len(self)
+    }
+}
+
+impl<'a, T: 'a> PermutationSource for &'a [T] {
+    type Item = &'a T;
+
+    fn perm_to_vec(&self, perm: &[usize]) -> Vec<&'a T> {
+        perm.into_iter().map(|&p| &self[p]).collect()
     }
 
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        let size = self.state.size();
-        (size, Some(size))
+    fn len(&self) -> usize {
+        <[T]>::len(self)
     }
 }

@@ -85,7 +85,7 @@ pub mod structs {
     pub use multipeek_impl::MultiPeek;
     pub use pad_tail::PadUsing;
     pub use peeking_take_while::PeekingTakeWhile;
-    pub use permutations::{PermutationsVec, PermutationIndices, PermutationsRef};
+    pub use permutations::{Permutations, PermutationSource};
     pub use process_results_impl::ProcessResults;
     #[cfg(feature = "use_std")]
     pub use put_back_n_impl::PutBackN;
@@ -1068,10 +1068,11 @@ pub trait Itertools : Iterator {
     }
 
     #[cfg(feature = "use_std")]
-    fn permutations(self, k: usize) -> PermutationsVec<Self::Item>
-        where Self: Sized
+    fn permutations(self, k: usize) -> Permutations<Vec<Self::Item>>
+        where Self: Sized,
+              Self::Item: Clone
     {
-        PermutationsVec::new(self.collect(), k)
+        Permutations::from_vals(self.collect(), k)
     }
 
     /// Return an iterator adaptor that pads the sequence to a minimum length of

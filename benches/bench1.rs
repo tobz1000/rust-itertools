@@ -7,7 +7,7 @@ use test::{black_box};
 use itertools::Itertools;
 
 use itertools::free::cloned;
-use itertools::{PermutationIndices, PermutationsRef, PermutationsVec};
+use itertools::Permutations;
 
 use std::iter::repeat;
 use std::cmp;
@@ -745,22 +745,11 @@ fn permutations_iter(b: &mut test::Bencher) {
 }
 
 #[bench]
-fn permutations_vec(b: &mut test::Bencher) {
-    let v = (0..PERM_COUNT).collect_vec();
-
-    b.iter(|| {
-        for _ in PermutationsVec::new(v.clone(), PERM_COUNT) {
-
-        }
-    })
-}
-
-#[bench]
 fn permutations_ref(b: &mut test::Bencher) {
     let v = (0..PERM_COUNT).collect_vec();
 
     b.iter(|| {
-        for _ in PermutationsRef::new(&v, PERM_COUNT) {
+        for _ in Permutations::from_vals(v.as_slice(), PERM_COUNT) {
 
         }
     })
@@ -769,18 +758,8 @@ fn permutations_ref(b: &mut test::Bencher) {
 #[bench]
 fn permutations_indices(b: &mut test::Bencher) {
     b.iter(|| {
-        for _ in PermutationIndices::new(PERM_COUNT, PERM_COUNT) {
-            
-        }
-    })
-}
+        for _ in Permutations::new(PERM_COUNT, PERM_COUNT) {
 
-#[bench]
-fn permutations_indices_stream(b: &mut test::Bencher) {
-    b.iter(|| {
-        let mut perms = PermutationIndices::new(PERM_COUNT, PERM_COUNT);
-        while let Some(_p) = perms.stream() {
-            
         }
     })
 }
