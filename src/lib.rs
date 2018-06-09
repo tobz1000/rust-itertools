@@ -1067,6 +1067,37 @@ pub trait Itertools : Iterator {
         combinations::combinations(self, n)
     }
 
+    /// Return an iterator adaptor that iterates over all k-permutations of the
+    /// elements from an iterator.
+    ///
+    /// Iterator element type is `Vec<Self::Item>` with length `k`. The iterator
+    /// produces a new Vec per iteration, and clones the iterator elements.
+    ///
+    /// If the input iterator is empty, or `k` is 0, or `k` greater than the
+    /// length of the input iterator, the resultant iterator adaptor will be empty.
+    ///
+    /// The original iterator is `collect`ed and stored in memory. As a result,
+    /// if the original iterator is already iterating over a memory structure,
+    /// it may be more efficient to use
+    /// [`Permutations::from_vals`](structs/struct.Permutations.html#method.from_vals).
+    ///
+    /// If the iterator is a simple range of the form `0..n`, it may be more
+    /// efficient to use
+    /// [`Permutations::new`](structs/struct.Permutations.html#method.new).
+    ///
+    /// ```
+    /// use itertools::Itertools;
+    ///
+    /// let perms = (5..8).permutations(2);
+    /// itertools::assert_equal(perms, vec![
+    ///     vec![5, 6],
+    ///     vec![5, 7],
+    ///     vec![6, 5],
+    ///     vec![6, 7],
+    ///     vec![7, 5],
+    ///     vec![7, 6],
+    /// ]);
+    /// ```
     #[cfg(feature = "use_std")]
     fn permutations(self, k: usize) -> Permutations<Vec<Self::Item>>
         where Self: Sized,

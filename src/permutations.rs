@@ -1,12 +1,16 @@
 use std::iter::Product;
 
-#[derive(Debug)]
-pub struct Permutations<S> {
+/// An iterator to iterate through all the `k`-permutations of a series of items.
+///
+/// Can be constructed from an in-memory list of items directly; or from an
+/// iterator, with the
+/// [`.permuatations()`](../trait.Itertools.html#method.permutations) method.
+#[must_use = "iterator adaptors are lazy and do nothing unless consumed"]
+pub struct Permutations<S: PermutationSource> {
     vals: S,
     state: PermutationState
 }
 
-#[derive(Debug)]
 enum PermutationState {
     Stopped {
         n: usize,
@@ -18,18 +22,40 @@ enum PermutationState {
     }
 }
 
+/// Functionality required to construct and iterate a
+/// [`Permutatations`](struct.Permutations.html) from a
+/// data source.
 pub trait PermutationSource {
+    /// The type to be yielded, within a `Vec`, for each permutation.
     type Item;
 
+    /// Builds a permutation from the data source, given a list of input indexes.
+    /// The length of the returned `Vec` should match the length of `perm`.
     fn perm_to_vec(&self, perm: &[usize]) -> Vec<Self::Item>;
 
+    /// Returns he number of items within the data source to be permuted.
     fn len(&self) -> usize;
 }
 
-#[derive(Debug)]
 pub struct PermutationIndicesSource(usize);
 
 impl Permutations<PermutationIndicesSource> {
+    /// Creates a new `Permutation` over the range `0..n`, yielding permutations
+    /// of length `k`.
+    ///
+    /// ```
+    /// use itertools::Permutations;
+    ///
+    /// let perms = Permutations::new(3, 2);
+    /// itertools::assert_equal(perms, vec![
+    ///     vec![0, 1],
+    ///     vec![0, 2],
+    ///     vec![1, 0],
+    ///     vec![1, 2],
+    ///     vec![2, 0],
+    ///     vec![2, 1],
+    /// ]);
+    /// ```
     pub fn new(n: usize, k: usize) -> Self {
         Permutations::from_vals(PermutationIndicesSource(n), k)
     }
@@ -38,6 +64,39 @@ impl Permutations<PermutationIndicesSource> {
 impl<S> Permutations<S>
     where S: PermutationSource
 {
+    /// Creates a new `Permutation` over the provided data source.
+    ///
+    /// If `vals` is a `Vec` of clonable items, the yielded permutations will be
+    /// clones of the source items.
+    ///
+    /// If `vals` is a slice, the yielded permutations will be of references to
+    /// the original items.
+    ///
+    /// ```
+    /// use itertools::Permutations;
+    ///
+    /// let vals = vec!['a', 'b', 'c'];
+    ///
+    /// let ref_perms = Permutations::from_vals(vals.as_slice(), 2);
+    /// itertools::assert_equal(ref_perms, vec![
+    ///     vec![&'a', &'b'],
+    ///     vec![&'a', &'c'],
+    ///     vec![&'b', &'a'],
+    ///     vec![&'b', &'c'],
+    ///     vec![&'c', &'a'],
+    ///     vec![&'c', &'b'],
+    /// ]);
+    ///
+    /// let owned_perms = Permutations::from_vals(vec!['a', 'b', 'c'], 2);
+    /// itertools::assert_equal(owned_perms, vec![
+    ///     vec!['a', 'b'],
+    ///     vec!['a', 'c'],
+    ///     vec!['b', 'a'],
+    ///     vec!['b', 'c'],
+    ///     vec!['c', 'a'],
+    ///     vec!['c', 'b'],
+    /// ]);
+    /// ```
     pub fn from_vals(vals: S, k: usize) -> Self {
         let state = PermutationState::new(vals.len(), k);
 
