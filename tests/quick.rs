@@ -11,7 +11,8 @@ use std::default::Default;
 
 use quickcheck as qc;
 use std::ops::Range;
-use std::cmp::Ordering;
+use std::cmp::{min, Ordering};
+use std::collections::HashSet;
 use itertools::Itertools;
 use itertools::{
     multizip,
@@ -627,6 +628,50 @@ quickcheck! {
     fn collect_tuple_matches_size(a: Iter<i16>) -> bool {
         let size = a.clone().count();
         a.collect_tuple::<(_, _, _)>().is_some() == (size == 3)
+    }
+
+    fn correct_permutations(vals: HashSet<i32>, k: usize) -> () {
+        // Test permutations only on iterators of distinct integers, to prevent
+        // false positives.
+
+        const MAX_N: usize = 5;
+
+        let n = min(vals.len(), MAX_N);
+        let vals: HashSet<i32> = vals.into_iter().take(n).collect();
+
+        let perms = vals.iter().permutations(k);
+
+        // Hint should be exact. Returned size_hint value is not tested here.
+        let exp_len = {
+            let (lower, upper) = perms.size_hint();
+            assert_eq!(Some(lower), upper);
+            lower
+        };
+
+        let mut actual = HashSet::new();
+
+        for perm in perms {
+            assert_eq!(perm.len(), k);
+
+            // Check that all items are valid
+            assert!(perm.iter().all(|p| vals.contains(p)));
+
+            // Check that all perm items are distinct
+            let distinct_len = {
+                let perm_set: HashSet<_> = perm.iter().collect();
+                perm_set.len()
+            };
+            assert_eq!(perm.len(), distinct_len);
+
+            // Check that the perm is new
+            assert!(actual.insert(perm));
+        }
+
+        assert_eq!(exp_len, actual.len());
+    }
+
+    fn permutations_size(a: Iter<i32>, k: usize) -> bool {
+        correct_size_hint(a.take(5).permutations(k))
     }
 }
 

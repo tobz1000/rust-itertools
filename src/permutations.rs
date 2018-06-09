@@ -1,12 +1,12 @@
-use std::iter::Product;
-
 /// An iterator to iterate through all the `k`-permutations of a series of items.
 ///
 /// Can be constructed from an in-memory list of items directly; or from an
 /// iterator, with the
 /// [`.permuatations()`](../trait.Itertools.html#method.permutations) method.
 #[must_use = "iterator adaptors are lazy and do nothing unless consumed"]
-pub struct Permutations<S: PermutationSource> {
+pub struct Permutations<S>
+    where S: PermutationSource
+{
     vals: S,
     state: PermutationState
 }
@@ -111,7 +111,7 @@ impl<S> Iterator for Permutations<S>
 
     fn next(&mut self) -> Option<Self::Item> {
         let Permutations { vals, state } = self;
-        state.stream().map(|perm| {
+        state.next().map(|perm| {
             let next = vals.perm_to_vec(perm);
             assert_eq!(perm.len(), next.len(), "Permutation length incorrect");
             next
@@ -119,12 +119,19 @@ impl<S> Iterator for Permutations<S>
     }
 
     fn count(self) -> usize {
-        self.state.size()
+        if let Some(count) = self.state.remaining() {
+            count
+        } else {
+            panic!("Iterator count greater than usize::MAX");
+        }
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        let size = self.state.size();
-        (size, Some(size))
+        if let Some(size) = self.state.remaining() {
+            (size, Some(size))
+        } else {
+            (::std::usize::MAX, None)
+        }
     }
 }
 
@@ -169,7 +176,7 @@ impl PermutationState {
         }
     }
 
-    fn stream(&mut self) -> Option<&[usize]> {
+    fn next(&mut self) -> Option<&[usize]> {
         self.advance();
 
         match self {
@@ -180,16 +187,26 @@ impl PermutationState {
         }
     }
 
-    fn size(&self) -> usize {
+    fn remaining(&self) -> Option<usize> {
         match self {
             &PermutationState::Stopped { n, k } => {
-                Product::product(n - k + 1..=n)
+                if n == 0 || k == 0 || k > n {
+                    Some(0)
+                } else {
+                    (n - k + 1..=n).fold(Some(1), |acc, i| {
+                        acc.and_then(|acc| acc.checked_mul(i))
+                    })
+                }
             },
-            PermutationState::Ongoing { cycles, .. } => {
+            PermutationState::Ongoing { cycles, indices } => {
                 cycles.iter()
-                    .rev()
                     .enumerate()
-                    .fold(0, |acc, (i, &c)| acc + i * c)
+                    .fold(Some(0), |acc, (i, &c)| {
+                        acc.and_then(|acc| {
+                            let radix = indices.len() - i;
+                            radix.checked_mul(c).and_then(|s| s.checked_add(acc))
+                        })
+                    })
             }
         }
     }
