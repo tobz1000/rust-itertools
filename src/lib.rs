@@ -85,7 +85,7 @@ pub mod structs {
     pub use multipeek_impl::MultiPeek;
     pub use pad_tail::PadUsing;
     pub use peeking_take_while::PeekingTakeWhile;
-    pub use permutations::Permutations;
+    pub use permutations::{PermutationsVec, PermutationIndices, PermutationsRef};
     pub use process_results_impl::ProcessResults;
     #[cfg(feature = "use_std")]
     pub use put_back_n_impl::PutBackN;
@@ -113,7 +113,6 @@ pub use diff::Diff;
 pub use kmerge_impl::{kmerge_by};
 pub use minmax::MinMaxResult;
 pub use peeking_take_while::PeekingNext;
-pub use permutations::permutations;
 pub use process_results_impl::process_results;
 pub use repeatn::repeat_n;
 pub use sources::{repeat_call, unfold, iterate};
@@ -1066,6 +1065,13 @@ pub trait Itertools : Iterator {
               Self::Item: Clone
     {
         combinations::combinations(self, n)
+    }
+
+    #[cfg(feature = "use_std")]
+    fn permutations(self, k: usize) -> PermutationsVec<Self::Item>
+        where Self: Sized
+    {
+        PermutationsVec::new(self.collect(), k)
     }
 
     /// Return an iterator adaptor that pads the sequence to a minimum length of

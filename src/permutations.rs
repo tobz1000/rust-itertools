@@ -1,36 +1,24 @@
-// ```python
-// def permutations(iterable, r=None):
-//     # permutations('ABCD', 2) --> AB AC AD BA BC BD CA CB CD DA DB DC
-//     # permutations(range(3)) --> 012 021 102 120 201 210
-//     pool = tuple(iterable)
-//     n = len(pool)
-//     r = n if r is None else r
-//     if r > n:
-//         return
-//     indices = range(n)
-//     cycles = range(n, n-r, -1)
-//     yield tuple(pool[i] for i in indices[:r])
-//     while n:
-//         for i in reversed(range(r)):
-//             cycles[i] -= 1
-//             if cycles[i] == 0:
-//                 # Remove value at indices[i] and push it to end
-//                 indices[i:] = indices[i+1:] + indices[i:i+1]
-//                 cycles[i] = n - i
-//             else:
-//                 j = cycles[i]
-//                 indices[i], indices[-j] = indices[-j], indices[i]
-//                 yield tuple(pool[i] for i in indices[:r])
-//                 break
-//         else:
-//             return
-// ```
+use std::iter::Product;
 
-pub fn permutations(n: usize, k: usize) -> Permutations {
-    Permutations::Stopped { n, k }
+#[derive(Debug)]
+pub struct PermutationsVec<T> {
+    vals: Vec<T>,
+    state: PermutationState
 }
 
-pub enum Permutations {
+#[derive(Debug)]
+pub struct PermutationsRef<'a, T: 'a> {
+    vals: &'a [T],
+    state: PermutationState
+}
+
+#[derive(Debug)]
+pub struct PermutationIndices{
+    state: PermutationState
+}
+
+#[derive(Debug)]
+enum PermutationState {
     Stopped {
         n: usize,
         k: usize
@@ -41,39 +29,101 @@ pub enum Permutations {
     }
 }
 
-impl Permutations {
+impl<T> PermutationsVec<T> {
+    pub fn new(vals: Vec<T>, k: usize) -> PermutationsVec<T> {
+        let state = PermutationState::new(vals.len(), k);
+
+        PermutationsVec { vals, state }
+    }
+}
+
+impl<T> Iterator for PermutationsVec<T>
+    where T: Clone
+{
+    type Item = Vec<T>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let PermutationsVec { vals, state } = self;
+
+        state.stream().map(|perm| {
+            perm.into_iter().map(|&p| vals[p].clone()).collect()
+        })
+    }
+
+    fn count(self) -> usize {
+        self.state.size()
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let size = self.state.size();
+        (size, Some(size))
+    }
+}
+
+impl<'a, T: 'a> PermutationsRef<'a, T> {
+    pub fn new(vals: &'a [T], k: usize) -> PermutationsRef<'a, T> {
+        let state = PermutationState::new(vals.len(), k);
+
+        PermutationsRef { vals, state }
+    }
+}
+
+impl<'a, T: 'a> Iterator for PermutationsRef<'a, T>
+{
+    type Item = Vec<&'a T>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let PermutationsRef { vals, state } = self;
+
+        state.stream().map(|perm| {
+            perm.into_iter().map(|&p| &vals[p]).collect()
+        })
+    }
+
+    fn count(self) -> usize {
+        self.state.size()
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let size = self.state.size();
+        (size, Some(size))
+    }
+}
+
+impl PermutationState {
+    fn new(n: usize, k: usize) -> PermutationState {
+        PermutationState::Stopped { n, k }
+    }
+
     fn advance(&mut self) {
         match self {
-            &mut Permutations::Stopped { n, k } => {
+            &mut PermutationState::Stopped { n, k } => {
                 if n == 0 || k == 0 || k > n {
                     return;
                 }
 
-                *self = Permutations::Ongoing {
-                    cycles: (n - k + 1..=n).rev().collect(),
-                    indices: (0..n).collect()
+                *self = PermutationState::Ongoing {
+                    indices: (0..n).collect(),
+                    cycles: (n - k..n).rev().collect(),
                 };
             },
-            Permutations::Ongoing { cycles, indices } => {
-                let i_len = indices.len();
-
-                for i in (0..cycles.len()).rev() {
-                    let c = &mut cycles[i];
-
-                    *c -= 1;
-
+            PermutationState::Ongoing { cycles, indices } => {
+                for (i, c) in cycles.iter_mut().enumerate().rev() {
                     if *c == 0 {
-                        *c = i_len - i;
+                        *c = indices.len() - i - 1;
 
                         let to_push = indices.remove(i);
                         indices.push(to_push);
                     } else {
-                        indices.swap(i, i_len - *c);
+                        let swap_index = indices.len() - *c;
+                        indices.swap(i, swap_index);
+
+                        *c -= 1;
                         return;
                     }
                 }
 
-                *self = Permutations::Stopped {
+                *self = PermutationState::Stopped {
                     n: indices.len(),
                     k: cycles.len()
                 };
@@ -81,26 +131,55 @@ impl Permutations {
         }
     }
 
-    fn get(&mut self) -> Option<&[usize]> {
+    fn stream(&mut self) -> Option<&[usize]> {
+        self.advance();
+
         match self {
-            Permutations::Stopped { .. } => None,
-            Permutations::Ongoing { indices, cycles } => {
+            PermutationState::Stopped { .. } => None,
+            PermutationState::Ongoing { indices, cycles } => {
                 Some(&indices[0..cycles.len()])
             }
         }
     }
 
-    pub fn stream(&mut self) -> Option<&[usize]> {
-        self.advance();
-        self.get()
+    fn size(&self) -> usize {
+        match self {
+            &PermutationState::Stopped { n, k } => {
+                Product::product(n - k + 1..=n)
+            },
+            PermutationState::Ongoing { cycles, .. } => {
+                cycles.iter()
+                    .rev()
+                    .enumerate()
+                    .fold(0, |acc, (i, &c)| acc + i * c)
+            }
+        }
     }
 }
 
-impl Iterator for Permutations {
+impl PermutationIndices {
+    pub fn new(n: usize, k: usize) -> PermutationIndices {
+        PermutationIndices { state: PermutationState::new(n, k) }
+    }
+
+    pub fn stream(&mut self) -> Option<&[usize]> {
+        self.state.stream()
+    }
+}
+
+impl Iterator for PermutationIndices {
     type Item = Vec<usize>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.advance();
-        self.get().map(|s| s.to_vec())
+        self.state.stream().map(|perm| perm.to_vec())
+    }
+
+    fn count(self) -> usize {
+        self.state.size()
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let size = self.state.size();
+        (size, Some(size))
     }
 }
