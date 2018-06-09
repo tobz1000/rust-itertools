@@ -52,7 +52,11 @@ impl<S> Iterator for Permutations<S>
 
     fn next(&mut self) -> Option<Self::Item> {
         let Permutations { vals, state } = self;
-        state.stream().map(|perm| vals.perm_to_vec(perm))
+        state.stream().map(|perm| {
+            let next = vals.perm_to_vec(perm);
+            assert_eq!(perm.len(), next.len(), "Permutation length incorrect");
+            next
+        })
     }
 
     fn count(self) -> usize {
