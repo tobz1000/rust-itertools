@@ -1042,11 +1042,14 @@ pub trait Itertools : Iterator {
         adaptors::tuple_combinations(self)
     }
 
-    /// Return an iterator adaptor that iterates over the `n`-length combinations of
+    /// Return an iterator adaptor that iterates over the `k`-length combinations of
     /// the elements from an iterator.
     ///
     /// Iterator element type is `Vec<Self::Item>`. The iterator produces a new Vec per iteration,
     /// and clones the iterator elements.
+    ///
+    /// If the input iterator is empty, or `k` is 0, or `k` greater than the
+    /// length of the input iterator, the resultant iterator adaptor will be empty.
     ///
     /// ```
     /// use itertools::Itertools;
@@ -1057,14 +1060,14 @@ pub trait Itertools : Iterator {
     ///     vec![1, 2, 4],
     ///     vec![1, 3, 4],
     ///     vec![2, 3, 4],
-    ///     ]);
+    /// ]);
     /// ```
     #[cfg(feature = "use_std")]
-    fn combinations(self, n: usize) -> Combinations<Self>
+    fn combinations(self, k: usize) -> Combinations<Self>
         where Self: Sized,
               Self::Item: Clone
     {
-        combinations::combinations(self, n)
+        combinations::combinations(self, k)
     }
 
     /// Return an iterator adaptor that iterates over all k-permutations of the
