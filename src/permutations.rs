@@ -1,5 +1,9 @@
 /// An iterator to iterate through all the `k`-permutations of a series of items.
 ///
+/// Source items are distinguished by their position, not value; so if there
+/// are identical items in the source, there will be some identical permutation
+/// iterations.
+///
 /// Can be constructed from an in-memory list of items directly; or from an
 /// iterator, with the
 /// [`.permuatations()`](../trait.Itertools.html#method.permutations) method.
@@ -72,6 +76,10 @@ impl<S> Permutations<S>
     ///
     /// If `vals` is a slice, the yielded permutations will be of references to
     /// the original items.
+    ///
+    /// Source items are distinguished by their position, not value; so if there
+    /// are identical items in the source, there will be some identical
+    /// permutation iterations.
     ///
     /// ```
     /// use itertools::Permutations;

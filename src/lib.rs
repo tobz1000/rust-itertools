@@ -1079,6 +1079,10 @@ pub trait Itertools : Iterator {
     /// If the input iterator is empty, or `k` is 0, or `k` greater than the
     /// length of the input iterator, the resultant iterator adaptor will be empty.
     ///
+    /// Source items are distinguished by their position, not value; so if there
+    /// are identical items in the input iterator, there will be some identical
+    /// permutation iterations.
+    ///
     /// The original iterator is `collect`ed and stored in memory. As a result,
     /// if the original iterator is already iterating over a memory structure,
     /// it may be more efficient to use
