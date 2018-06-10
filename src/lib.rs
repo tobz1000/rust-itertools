@@ -85,6 +85,7 @@ pub mod structs {
     pub use multipeek_impl::MultiPeek;
     pub use pad_tail::PadUsing;
     pub use peeking_take_while::PeekingTakeWhile;
+    #[cfg(feature = "use_std")]
     pub use permutations::{Permutations, PermutationSource};
     pub use process_results_impl::ProcessResults;
     #[cfg(feature = "use_std")]
@@ -144,6 +145,7 @@ mod minmax;
 mod multipeek_impl;
 mod pad_tail;
 mod peeking_take_while;
+#[cfg(feature = "use_std")]
 mod permutations;
 mod process_results_impl;
 #[cfg(feature = "use_std")]
