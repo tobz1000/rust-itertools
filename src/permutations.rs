@@ -19,7 +19,8 @@ enum PermutationState {
     Ongoing {
         indices: Vec<usize>,
         cycles: Vec<usize>
-    }
+    },
+    Empty
 }
 
 /// Functionality required to construct and iterate a
@@ -137,16 +138,16 @@ impl<S> Iterator for Permutations<S>
 
 impl PermutationState {
     fn new(n: usize, k: usize) -> PermutationState {
-        PermutationState::Stopped { n, k }
+        if n == 0 || k == 0 || k > n {
+            PermutationState::Empty
+        } else {
+            PermutationState::Stopped { n, k }
+        }
     }
 
     fn advance(&mut self) {
         match self {
             &mut PermutationState::Stopped { n, k } => {
-                if n == 0 || k == 0 || k > n {
-                    return;
-                }
-
                 *self = PermutationState::Ongoing {
                     indices: (0..n).collect(),
                     cycles: (n - k..n).rev().collect(),
@@ -172,7 +173,8 @@ impl PermutationState {
                     n: indices.len(),
                     k: cycles.len()
                 };
-            }
+            },
+            PermutationState::Empty => { return; },
         }
     }
 
@@ -183,31 +185,35 @@ impl PermutationState {
             PermutationState::Stopped { .. } => None,
             PermutationState::Ongoing { indices, cycles } => {
                 Some(&indices[0..cycles.len()])
-            }
+            },
+            PermutationState::Empty => None
         }
     }
 
     fn remaining(&self) -> Option<usize> {
         match self {
             &PermutationState::Stopped { n, k } => {
-                if n == 0 || k == 0 || k > n {
-                    Some(0)
-                } else {
-                    (n - k + 1..=n).fold(Some(1), |acc, i| {
-                        acc.and_then(|acc| acc.checked_mul(i))
-                    })
-                }
+                (n - k + 1..=n).fold(Some(1), |acc, i| {
+                    acc.and_then(|acc| acc.checked_mul(i))
+                })
             },
             PermutationState::Ongoing { cycles, indices } => {
-                cycles.iter()
-                    .enumerate()
-                    .fold(Some(0), |acc, (i, &c)| {
-                        acc.and_then(|acc| {
-                            let radix = indices.len() - i;
-                            radix.checked_mul(c).and_then(|s| s.checked_add(acc))
-                        })
-                    })
-            }
+                let mut size: usize = 0;
+
+                for (i, &c) in cycles.iter().enumerate() {
+                    let radix = indices.len() - i;
+                    let next_size = size.checked_mul(radix)
+                        .and_then(|size| size.checked_add(c));
+
+                    size = match next_size {
+                        Some(size) => size,
+                        None => { return None; }
+                    };
+                }
+
+                Some(size)
+            },
+            PermutationState::Empty => Some(0)
         }
     }
 }
