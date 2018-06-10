@@ -109,7 +109,7 @@ impl<S> Permutations<S>
     pub fn from_vals(vals: S, k: usize) -> Self {
         let state = PermutationState::new(vals.len(), k);
 
-        Permutations { vals, state }
+        Permutations { vals: vals, state: state }
     }
 }
 
@@ -119,7 +119,7 @@ impl<S> Iterator for Permutations<S>
     type Item = Vec<S::Item>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let Permutations { vals, state } = self;
+        let &mut Permutations { ref vals, ref mut state } = self;
         state.next().map(|perm| {
             let next = vals.perm_to_vec(perm);
             assert_eq!(perm.len(), next.len(), "Permutation length incorrect");
@@ -149,19 +149,19 @@ impl PermutationState {
         if n == 0 || k == 0 || k > n {
             PermutationState::Empty
         } else {
-            PermutationState::Stopped { n, k }
+            PermutationState::Stopped { n: n, k: k }
         }
     }
 
     fn advance(&mut self) {
-        match self {
+        *self = match self {
             &mut PermutationState::Stopped { n, k } => {
-                *self = PermutationState::Ongoing {
+                PermutationState::Ongoing {
                     indices: (0..n).collect(),
                     cycles: (n - k..n).rev().collect(),
-                };
+                }
             },
-            PermutationState::Ongoing { cycles, indices } => {
+            &mut PermutationState::Ongoing { ref mut cycles, ref mut indices } => {
                 for (i, c) in cycles.iter_mut().enumerate().rev() {
                     if *c == 0 {
                         *c = indices.len() - i - 1;
@@ -177,12 +177,12 @@ impl PermutationState {
                     }
                 }
 
-                *self = PermutationState::Stopped {
+                PermutationState::Stopped {
                     n: indices.len(),
                     k: cycles.len()
-                };
+                }
             },
-            PermutationState::Empty => { return; },
+            &mut PermutationState::Empty => { PermutationState::Empty },
         }
     }
 
@@ -190,22 +190,22 @@ impl PermutationState {
         self.advance();
 
         match self {
-            PermutationState::Stopped { .. } => None,
-            PermutationState::Ongoing { indices, cycles } => {
+            &mut PermutationState::Stopped { .. } => None,
+            &mut PermutationState::Ongoing { ref indices, ref cycles } => {
                 Some(&indices[0..cycles.len()])
             },
-            PermutationState::Empty => None
+            &mut PermutationState::Empty => None
         }
     }
 
     fn remaining(&self) -> Option<usize> {
         match self {
             &PermutationState::Stopped { n, k } => {
-                (n - k + 1..=n).fold(Some(1), |acc, i| {
+                (n - k + 1..n + 1).fold(Some(1), |acc, i| {
                     acc.and_then(|acc| acc.checked_mul(i))
                 })
             },
-            PermutationState::Ongoing { cycles, indices } => {
+            &PermutationState::Ongoing { ref cycles, ref indices } => {
                 let mut size: usize = 0;
 
                 for (i, &c) in cycles.iter().enumerate() {
@@ -221,7 +221,7 @@ impl PermutationState {
 
                 Some(size)
             },
-            PermutationState::Empty => Some(0)
+            &PermutationState::Empty => Some(0)
         }
     }
 }
