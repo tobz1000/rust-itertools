@@ -1197,7 +1197,7 @@ pub trait Itertools : Iterator {
     /// ]);
     /// ```
     ///
-    /// Note: Combinations does not take into account the equality of the iterated values.
+    /// Note: Permutations does not take into account the equality of the iterated values.
     /// ```
     /// use itertools::Itertools;
     ///
