@@ -1,6 +1,6 @@
 [package]
 name = "itertools"
-version = "0.7.8"
+version = "0.8.0"
 
 license = "MIT/Apache-2.0"
 repository = "https://github.com/bluss/rust-itertools"
@@ -11,6 +11,7 @@ description = "Extra iterator adaptors, iterator methods, free functions, and ma
 
 keywords = ["iterator", "data-structure", "zip", "product", "group-by"]
 categories = ["algorithms", "rust-patterns"]
+exclude = ["/bors.toml"]
 
 [lib]
 bench = false
@@ -19,8 +20,11 @@ test = false
 [dependencies]
 either = { version = "1.0", default-features = false }
 
+[dev-dependencies]
+rand = "0.6"
+
 [dev-dependencies.quickcheck]
-version = "0.5"
+version = "0.7"
 default-features = false
 
 [dev-dependencies.permutohedron]

@@ -6,6 +6,7 @@
 #[macro_use] extern crate itertools;
 
 extern crate quickcheck;
+extern crate rand;
 
 use std::default::Default;
 
@@ -18,7 +19,6 @@ use itertools::{
     multizip,
     EitherOrBoth,
 };
-use itertools::flatten;
 use itertools::free::{
     cloned,
     enumerate,
@@ -30,6 +30,8 @@ use itertools::free::{
     zip_eq,
 };
 
+use rand::Rng;
+use rand::seq::SliceRandom;
 use quickcheck::TestResult;
 
 /// Trait for size hint modifier types
@@ -79,8 +81,8 @@ impl qc::Arbitrary for Inexact {
         let ue_choices = &[0, ue_value, usize::max_value()];
         let oe_choices = &[0, oe_value, usize::max_value()];
         Inexact {
-            underestimate: *g.choose(ue_choices).unwrap(),
-            overestimate: *g.choose(oe_choices).unwrap(),
+            underestimate: *ue_choices.choose(g).unwrap(),
+            overestimate: *oe_choices.choose(g).unwrap(),
         }
     }
 
@@ -404,6 +406,7 @@ quickcheck! {
         assert_eq!(answer.into_iter().last(), a.clone().multi_cartesian_product().last());
     }
 
+    #[allow(deprecated)]
     fn size_step(a: Iter<i16, Exact>, s: usize) -> bool {
         let mut s = s;
         if s == 0 {
@@ -413,6 +416,8 @@ quickcheck! {
         correct_size_hint(filt.step(s)) &&
             exact_size(a.step(s))
     }
+
+    #[allow(deprecated)]
     fn equal_step(a: Iter<i16>, s: usize) -> bool {
         let mut s = s;
         if s == 0 {
@@ -425,6 +430,8 @@ quickcheck! {
             keep
         }))
     }
+
+    #[allow(deprecated)]
     fn equal_step_vec(a: Vec<i16>, s: usize) -> bool {
         let mut s = s;
         if s == 0 {
@@ -605,16 +612,6 @@ quickcheck! {
         true
     }
 
-    fn equal_flatten(a: Vec<Option<i32>>) -> bool {
-        itertools::equal(flatten(&a),
-                         a.iter().filter_map(|x| x.as_ref()))
-    }
-
-    fn equal_flatten_vec(a: Vec<Vec<u8>>) -> bool {
-        itertools::equal(flatten(&a),
-                         a.iter().flat_map(|x| x))
-    }
-
     fn equal_combinations_2(a: Vec<u8>) -> bool {
         let mut v = Vec::new();
         for (i, x) in enumerate(&a) {
@@ -684,8 +681,22 @@ quickcheck! {
 }
 
 quickcheck! {
+    fn equal_dedup_by(a: Vec<(i32, i32)>) -> bool {
+        let mut b = a.clone();
+        b.dedup_by(|x, y| x.0==y.0);
+        itertools::equal(&b, a.iter().dedup_by(|x, y| x.0==y.0))
+    }
+}
+
+quickcheck! {
     fn size_dedup(a: Vec<i32>) -> bool {
         correct_size_hint(a.iter().dedup())
+    }
+}
+
+quickcheck! {
+    fn size_dedup_by(a: Vec<(i32, i32)>) -> bool {
+        correct_size_hint(a.iter().dedup_by(|x, y| x.0==y.0))
     }
 }
 
@@ -1033,6 +1044,7 @@ quickcheck! {
 }
 
 quickcheck! {
+    #[allow(deprecated)]
     fn tree_fold1_f64(mut a: Vec<f64>) -> TestResult {
         fn collapse_adjacent<F>(x: Vec<f64>, mut f: F) -> Vec<f64>
             where F: FnMut(f64, f64) -> f64
@@ -1060,5 +1072,15 @@ quickcheck! {
         let expected = a.pop();
 
         TestResult::from_bool(actual == expected)
+    }
+}
+
+quickcheck! {
+    fn exactly_one_i32(a: Vec<i32>) -> TestResult {
+        let ret = a.iter().cloned().exactly_one();
+        match a.len() {
+            1 => TestResult::from_bool(ret.unwrap() == a[0]),
+            _ => TestResult::from_bool(ret.unwrap_err().eq(a.iter().cloned())),
+        }
     }
 }

@@ -2,12 +2,34 @@
 #![crate_name="itertools"]
 #![cfg_attr(not(feature = "use_std"), no_std)]
 
-//! Itertools — extra iterator adaptors, functions and macros.
+//! Extra iterator adaptors, functions and macros.
 //!
-//! To use the iterator methods in this crate, import the [`Itertools` trait](./trait.Itertools.html):
+//! To extend [`Iterator`] with methods in this crate, import
+//! the [`Itertools` trait](./trait.Itertools.html):
 //!
 //! ```
 //! use itertools::Itertools;
+//! ```
+//!
+//! Now, new methods like [`interleave`](./trait.Itertools.html#method.interleave)
+//! are available on all iterators:
+//!
+//! ```
+//! use itertools::Itertools;
+//!
+//! let it = (1..3).interleave(vec![-1, -2]);
+//! itertools::assert_equal(it, vec![1, -1, 2, -2]);
+//! ```
+//!
+//! Most iterator methods are also provided as functions (with the benefit
+//! that they convert parameters using [`IntoIterator`]):
+//!
+//! ```
+//! use itertools::interleave;
+//!
+//! for elt in interleave(&[1, 2, 3], &[2, 3, 4]) {
+//!     /* loop body */
+//! }
 //! ```
 //!
 //! ## Crate Features
@@ -20,9 +42,10 @@
 //!
 //! ## Rust Version
 //!
-//! This version of itertools requires Rust 1.12 or later.
+//! This version of itertools requires Rust 1.24 or later.
 //!
-#![doc(html_root_url="https://docs.rs/itertools/0.7/")]
+//! [`Iterator`]: https://doc.rust-lang.org/std/iter/trait.Iterator.html
+#![doc(html_root_url="https://docs.rs/itertools/0.8/")]
 
 extern crate either;
 
@@ -40,6 +63,10 @@ use std::fmt;
 use std::hash::Hash;
 #[cfg(feature = "use_std")]
 use std::fmt::Write;
+#[cfg(feature = "use_std")]
+type VecIntoIter<T> = ::std::vec::IntoIter<T>;
+#[cfg(feature = "use_std")]
+use std::iter::FromIterator;
 
 #[macro_use]
 mod impl_macros;
@@ -52,12 +79,13 @@ pub use std::iter as __std_iter;
 pub mod structs {
     pub use adaptors::{
         Dedup,
+        DedupBy,
         Interleave,
         InterleaveShortest,
         Product,
         PutBack,
         Batching,
-        Step,
+        MapInto,
         MapResults,
         Merge,
         MergeBy,
@@ -65,15 +93,17 @@ pub mod structs {
         WhileSome,
         Coalesce,
         TupleCombinations,
-        Flatten,
         Positions,
         Update,
     };
+    #[allow(deprecated)]
+    pub use adaptors::Step;
     #[cfg(feature = "use_std")]
     pub use adaptors::MultiProduct;
     #[cfg(feature = "use_std")]
     pub use combinations::Combinations;
     pub use cons_tuples_impl::ConsTuples;
+    pub use exactly_one_err::ExactlyOneError;
     pub use format::{Format, FormatWith};
     #[cfg(feature = "use_std")]
     pub use groupbylazy::{IntoChunks, Chunk, Chunks, GroupBy, Group, Groups};
@@ -93,6 +123,7 @@ pub mod structs {
     #[cfg(feature = "use_std")]
     pub use rciter_impl::RcIter;
     pub use repeatn::RepeatN;
+    #[allow(deprecated)]
     pub use sources::{RepeatCall, Unfold, Iterate};
     #[cfg(feature = "use_std")]
     pub use tee::Tee;
@@ -104,8 +135,8 @@ pub mod structs {
     pub use zip_longest::ZipLongest;
     pub use ziptuple::Zip;
 }
+#[allow(deprecated)]
 pub use structs::*;
-pub use adaptors::flatten;
 pub use concat_impl::concat;
 pub use cons_tuples_impl::cons_tuples;
 pub use diff::diff_with;
@@ -116,6 +147,7 @@ pub use minmax::MinMaxResult;
 pub use peeking_take_while::PeekingNext;
 pub use process_results_impl::process_results;
 pub use repeatn::repeat_n;
+#[allow(deprecated)]
 pub use sources::{repeat_call, unfold, iterate};
 pub use with_position::Position;
 pub use ziptuple::multizip;
@@ -130,6 +162,7 @@ mod concat_impl;
 mod cons_tuples_impl;
 #[cfg(feature = "use_std")]
 mod combinations;
+mod exactly_one_err;
 mod diff;
 mod format;
 #[cfg(feature = "use_std")]
@@ -214,12 +247,15 @@ macro_rules! iproduct {
 /// returns `None`.
 ///
 /// This is a version of the standard ``.zip()`` that's supporting more than
-/// two iterators. The iterator elment type is a tuple with one element
+/// two iterators. The iterator element type is a tuple with one element
 /// from each of the input iterators. Just like ``.zip()``, the iteration stops
 /// when the shortest of the inputs reaches its end.
 ///
-/// **Note:** The result of this macro is an iterator composed of
-/// repeated `.zip()` and a `.map()`; it has an anonymous type.
+/// **Note:** The result of this macro is in the general case an iterator
+/// composed of repeated `.zip()` and a `.map()`; it has an anonymous type.
+/// The special cases of one and two arguments produce the equivalent of
+/// `$a.into_iter()` and `$a.into_iter().zip($b)` respectively.
+///
 /// Prefer this macro `izip!()` over [`multizip`] for the performance benefits
 /// of using the standard library `.zip()`.
 ///
@@ -261,8 +297,20 @@ macro_rules! izip {
         izip!(@closure ($p, b) => ( $($tup)*, b ) $( , $tail )*)
     };
 
-    ( $first:expr $( , $rest:expr )* $(,)* ) => {
+    // unary
+    ($first:expr $(,)*) => {
         $crate::__std_iter::IntoIterator::into_iter($first)
+    };
+
+    // binary
+    ($first:expr, $second:expr $(,)*) => {
+        izip!($first)
+            .zip($second)
+    };
+
+    // n-ary where n > 2
+    ( $first:expr $( , $rest:expr )* $(,)* ) => {
+        izip!($first)
             $(
                 .zip($rest)
             )*
@@ -272,7 +320,8 @@ macro_rules! izip {
     };
 }
 
-/// The trait `Itertools`: extra iterator adaptors and methods for iterators.
+/// An [`Iterator`] blanket implementation that provides extra adaptors and
+/// methods.
 ///
 /// This trait defines a number of methods. They are divided into two groups:
 ///
@@ -284,6 +333,8 @@ macro_rules! izip {
 /// return a regular value of some other kind.
 /// [`.next_tuple()`](#method.next_tuple) is an example and the first regular
 /// method in the list.
+///
+/// [`Iterator`]: https://doc.rust-lang.org/std/iter/trait.Iterator.html
 pub trait Itertools : Iterator {
     // adaptors
 
@@ -615,10 +666,26 @@ pub trait Itertools : Iterator {
     /// let it = (0..8).step(3);
     /// itertools::assert_equal(it, vec![0, 3, 6]);
     /// ```
+    #[deprecated(note="Use std .step_by() instead", since="0.8")]
+    #[allow(deprecated)]
     fn step(self, n: usize) -> Step<Self>
         where Self: Sized
     {
         adaptors::step(self, n)
+    }
+
+    /// Convert each item of the iterator using the `Into` trait.
+    ///
+    /// ```rust
+    /// use itertools::Itertools;
+    ///
+    /// (1i32..42i32).map_into::<f64>().collect_vec();
+    /// ```
+    fn map_into<R>(self) -> MapInto<Self, R>
+        where Self: Sized,
+              Self::Item: Into<R>,
+    {
+        adaptors::map_into(self)
     }
 
     /// Return an iterator adaptor that applies the provided closure
@@ -894,6 +961,28 @@ pub trait Itertools : Iterator {
         adaptors::dedup(self)
     }
 
+    /// Remove duplicates from sections of consecutive identical elements,
+    /// determining equality using a comparison function.
+    /// If the iterator is sorted, all elements will be unique.
+    ///
+    /// Iterator element type is `Self::Item`.
+    ///
+    /// This iterator is *fused*.
+    ///
+    /// ```
+    /// use itertools::Itertools;
+    ///
+    /// let data = vec![(0, 1.), (1, 1.), (0, 2.), (0, 3.), (1, 3.), (1, 2.), (2, 2.)];
+    /// itertools::assert_equal(data.into_iter().dedup_by(|x, y| x.1==y.1),
+    ///                         vec![(0, 1.), (0, 2.), (0, 3.), (1, 2.)]);
+    /// ```
+    fn dedup_by<Cmp>(self, cmp: Cmp) -> DedupBy<Self, Cmp>
+        where Self: Sized,
+              Cmp: FnMut(&Self::Item, &Self::Item)->bool,
+    {
+        adaptors::dedup_by(self, cmp)
+    }
+
     /// Return an iterator adaptor that filters out elements that have
     /// already been produced once during the iteration. Duplicates
     /// are detected using hash and equality.
@@ -1107,6 +1196,19 @@ pub trait Itertools : Iterator {
     ///     vec![7, 6],
     /// ]);
     /// ```
+    ///
+    /// Note: Combinations does not take into account the equality of the iterated values.
+    /// ```
+    /// use itertools::Itertools;
+    ///
+    /// let it = vec![1, 2, 2].into_iter().combinations(2);
+    /// itertools::assert_equal(it, vec![
+    ///     vec![1, 2], // Note: these are the same
+    ///     vec![1, 2], // Note: these are the same
+    ///     vec![2, 2],
+    /// ]);
+    /// ```
+    ///
     #[cfg(feature = "use_std")]
     fn permutations(self, k: usize) -> Permutations<Vec<Self::Item>>
         where Self: Sized,
@@ -1137,29 +1239,6 @@ pub trait Itertools : Iterator {
               F: FnMut(usize) -> Self::Item
     {
         pad_tail::pad_using(self, min, f)
-    }
-
-    /// Flatten an iterator of iterables into a single combined sequence of all
-    /// the elements in the iterables.
-    ///
-    /// This is more or less equivalent to `.flat_map` with an identity
-    /// function.
-    ///
-    /// See also the [`flatten`](fn.flatten.html) function.
-    ///
-    /// ```ignore
-    /// use itertools::Itertools;
-    ///
-    /// let data = vec![vec![1, 2, 3], vec![4, 5, 6]];
-    /// let flattened = data.iter().flatten();
-    ///
-    /// itertools::assert_equal(flattened, &[1, 2, 3, 4, 5, 6]);
-    /// ```
-    fn flatten(self) -> Flatten<Self, <Self::Item as IntoIterator>::IntoIter>
-        where Self: Sized,
-              Self::Item: IntoIterator
-    {
-        adaptors::flatten(self)
     }
 
     /// Return an iterator adaptor that wraps each element in a `Position` to
@@ -1388,11 +1467,12 @@ pub trait Itertools : Iterator {
     ///
     /// itertools::assert_equal(rx.iter(), vec![1, 3, 5, 7, 9]);
     /// ```
-    fn foreach<F>(self, mut f: F)
+    #[deprecated(note="Use .for_each() instead", since="0.8")]
+    fn foreach<F>(self, f: F)
         where F: FnMut(Self::Item),
               Self: Sized,
     {
-        self.fold((), move |(), element| f(element))
+        self.for_each(f)
     }
 
     /// Combine all an iterator's elements into one element by using `Extend`.
@@ -1455,7 +1535,7 @@ pub trait Itertools : Iterator {
         count
     }
 
-    /// Combine all iterator elements into one String, seperated by `sep`.
+    /// Combine all iterator elements into one String, separated by `sep`.
     ///
     /// Use the `Display` implementation of each element.
     ///
@@ -1567,7 +1647,7 @@ pub trait Itertools : Iterator {
     /// ```
     ///
     /// With a `start` value of 0 and an addition as folding function,
-    /// this effetively results in *((0 + 1) + 2) + 3*
+    /// this effectively results in *((0 + 1) + 2) + 3*
     ///
     /// ```
     /// use std::ops::Add;
@@ -1696,10 +1776,9 @@ pub trait Itertools : Iterator {
     /// assert_eq!((0..10).tree_fold1(|x, y| x + y),
     ///     (0..10).fold1(|x, y| x + y));
     /// // ...but not for non-associative ones
-    /// assert!((0..10).tree_fold1(|x, y| x - y)
-    ///     != (0..10).fold1(|x, y| x - y));
+    /// assert_ne!((0..10).tree_fold1(|x, y| x - y),
+    ///     (0..10).fold1(|x, y| x - y));
     /// ```
-    // FIXME: If minver changes to >= 1.13, use `assert_ne!` in the doctest.
     fn tree_fold1<F>(mut self, mut f: F) -> Option<Self::Item>
         where F: FnMut(Self::Item, Self::Item) -> Self::Item,
               Self: Sized,
@@ -1798,6 +1877,7 @@ pub trait Itertools : Iterator {
     /// The big difference between the computations of `result2` and `result3` is that while
     /// `fold()` called the provided closure for every item of the callee iterator,
     /// `fold_while()` actually stopped iterating as soon as it encountered `Fold::Done(_)`.
+    #[deprecated(note="Use .try_fold() instead", since="0.8")]
     fn fold_while<B, F>(&mut self, init: B, mut f: F) -> FoldWhile<B>
         where Self: Sized,
               F: FnMut(B, Self::Item) -> FoldWhile<B>
@@ -1812,10 +1892,14 @@ pub trait Itertools : Iterator {
         FoldWhile::Continue(acc)
     }
 
-    /// Collect all iterator elements into a sorted vector in ascending order.
+    /// Sort all iterator elements into a new iterator in ascending order.
     ///
     /// **Note:** This consumes the entire iterator, uses the
-    /// `slice::sort_by()` method and returns the sorted vector.
+    /// `slice::sort()` method and returns the result as a new
+    /// iterator that owns its elements.
+    ///
+    /// The sorted iterator, if directly collected to a `Vec`, is converted
+    /// without any extra copying or allocation cost.
     ///
     /// ```
     /// use itertools::Itertools;
@@ -1826,17 +1910,25 @@ pub trait Itertools : Iterator {
     ///                         "abcdef".chars());
     /// ```
     #[cfg(feature = "use_std")]
-    fn sorted(self) -> Vec<Self::Item>
+    fn sorted(self) -> VecIntoIter<Self::Item>
         where Self: Sized,
               Self::Item: Ord
     {
-        self.sorted_by(Ord::cmp)
+        // Use .sort() directly since it is not quite identical with
+        // .sort_by(Ord::cmp)
+        let mut v = Vec::from_iter(self);
+        v.sort();
+        v.into_iter()
     }
 
-    /// Collect all iterator elements into a sorted vector.
+    /// Sort all iterator elements into a new iterator in ascending order.
     ///
     /// **Note:** This consumes the entire iterator, uses the
-    /// `slice::sort_by()` method and returns the sorted vector.
+    /// `slice::sort_by()` method and returns the result as a new
+    /// iterator that owns its elements.
+    ///
+    /// The sorted iterator, if directly collected to a `Vec`, is converted
+    /// without any extra copying or allocation cost.
     ///
     /// ```
     /// use itertools::Itertools;
@@ -1847,27 +1939,29 @@ pub trait Itertools : Iterator {
     /// let oldest_people_first = people
     ///     .into_iter()
     ///     .sorted_by(|a, b| Ord::cmp(&b.1, &a.1))
-    ///     .into_iter()
     ///     .map(|(person, _age)| person);
     ///
     /// itertools::assert_equal(oldest_people_first,
     ///                         vec!["Jill", "Jack", "Jane", "John"]);
     /// ```
     #[cfg(feature = "use_std")]
-    fn sorted_by<F>(self, cmp: F) -> Vec<Self::Item>
+    fn sorted_by<F>(self, cmp: F) -> VecIntoIter<Self::Item>
         where Self: Sized,
               F: FnMut(&Self::Item, &Self::Item) -> Ordering,
     {
-        let mut v: Vec<Self::Item> = self.collect();
-
+        let mut v = Vec::from_iter(self);
         v.sort_by(cmp);
-        v
+        v.into_iter()
     }
 
-    /// Collect all iterator elements into a sorted vector.
+    /// Sort all iterator elements into a new iterator in ascending order.
     ///
     /// **Note:** This consumes the entire iterator, uses the
-    /// `slice::sort_by_key()` method and returns the sorted vector.
+    /// `slice::sort_by_key()` method and returns the result as a new
+    /// iterator that owns its elements.
+    ///
+    /// The sorted iterator, if directly collected to a `Vec`, is converted
+    /// without any extra copying or allocation cost.
     ///
     /// ```
     /// use itertools::Itertools;
@@ -1878,22 +1972,20 @@ pub trait Itertools : Iterator {
     /// let oldest_people_first = people
     ///     .into_iter()
     ///     .sorted_by_key(|x| -x.1)
-    ///     .into_iter()
     ///     .map(|(person, _age)| person);
     ///
     /// itertools::assert_equal(oldest_people_first,
     ///                         vec!["Jill", "Jack", "Jane", "John"]);
     /// ```
     #[cfg(feature = "use_std")]
-    fn sorted_by_key<K, F>(self, f: F) -> Vec<Self::Item>
+    fn sorted_by_key<K, F>(self, f: F) -> VecIntoIter<Self::Item>
         where Self: Sized,
               K: Ord,
               F: FnMut(&Self::Item) -> K,
     {
-        let mut v: Vec<Self::Item> = self.collect();
-
+        let mut v = Vec::from_iter(self);
         v.sort_by_key(f);
-        v
+        v.into_iter()
     }
 
     /// Collect all iterator elements into one of two
@@ -1938,13 +2030,13 @@ pub trait Itertools : Iterator {
 
     /// Return a `HashMap` of keys mapped to `Vec`s of values. Keys and values
     /// are taken from `(Key, Value)` tuple pairs yielded by the input iterator.
-    /// 
+    ///
     /// ```
     /// use itertools::Itertools;
-    /// 
+    ///
     /// let data = vec![(0, 10), (2, 12), (3, 13), (0, 20), (3, 33), (2, 42)];
     /// let lookup = data.into_iter().into_group_map();
-    /// 
+    ///
     /// assert_eq!(lookup[&0], vec![10, 20]);
     /// assert_eq!(lookup.get(&1), None);
     /// assert_eq!(lookup[&2], vec![12, 42]);
@@ -2032,6 +2124,42 @@ pub trait Itertools : Iterator {
             |_| (),
             |x, y, _, _| Ordering::Less == compare(x, y)
         )
+    }
+
+    /// If the iterator yields exactly one element, that element will be returned, otherwise
+    /// an error will be returned containing an iterator that has the same output as the input
+    /// iterator.
+    ///
+    /// This provides an additional layer of validation over just calling `Iterator::next()`.
+    /// If your assumption that there should only be one element yielded is false this provides
+    /// the opportunity to detect and handle that, preventing errors at a distance.
+    ///
+    /// # Examples
+    /// ```
+    /// use itertools::Itertools;
+    ///
+    /// assert_eq!((0..10).filter(|&x| x == 2).exactly_one().unwrap(), 2);
+    /// assert!((0..10).filter(|&x| x > 1 && x < 4).exactly_one().unwrap_err().eq(2..4));
+    /// assert!((0..10).filter(|&x| x > 1 && x < 5).exactly_one().unwrap_err().eq(2..5));
+    /// assert!((0..10).filter(|&_| false).exactly_one().unwrap_err().eq(0..0));
+    /// ```
+    fn exactly_one(mut self) -> Result<Self::Item, ExactlyOneError<Self>>
+    where
+        Self: Sized,
+    {
+        match self.next() {
+            Some(first) => {
+                match self.next() {
+                    Some(second) => {
+                        Err(ExactlyOneError::new((Some(first), Some(second)), self))
+                    }
+                    None => {
+                        Ok(first)
+                    }
+                }
+            }
+            None => Err(ExactlyOneError::new((None, None), self)),
+        }
     }
 }
 
@@ -2145,7 +2273,7 @@ pub fn partition<'a, A: 'a, I, F>(iter: I, mut pred: F) -> usize
 /// An enum used for controlling the execution of `.fold_while()`.
 ///
 /// See [`.fold_while()`](trait.Itertools.html#method.fold_while) for more information.
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum FoldWhile<T> {
     /// Continue folding with this value
     Continue(T),
