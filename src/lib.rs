@@ -86,7 +86,7 @@ pub mod structs {
     pub use pad_tail::PadUsing;
     pub use peeking_take_while::PeekingTakeWhile;
     #[cfg(feature = "use_std")]
-    pub use permutations::{Permutations, PermutationSource};
+    pub use permutations::Permutations;
     pub use process_results_impl::ProcessResults;
     #[cfg(feature = "use_std")]
     pub use put_back_n_impl::PutBackN;
