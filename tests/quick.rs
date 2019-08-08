@@ -12,12 +12,13 @@ use std::default::Default;
 
 use quickcheck as qc;
 use std::ops::Range;
-use std::cmp::{min, Ordering};
+use std::cmp::{max, min, Ordering};
 use std::collections::HashSet;
 use itertools::Itertools;
 use itertools::{
     multizip,
     EitherOrBoth,
+    Permutations
 };
 use itertools::free::{
     cloned,
@@ -665,6 +666,35 @@ quickcheck! {
         }
 
         assert_eq!(exp_len, actual.len());
+    }
+
+    fn permutations_lexic_order(a: usize, b: usize) -> () {
+        let a = a % 6;
+        let b = b % 6;
+
+        let n = max(a, b);
+        let k = min (a, b);
+
+        let expected_first: Vec<usize> = (0..k).collect();
+        let expected_last: Vec<usize> = ((n - k)..n).rev().collect();
+
+        let mut perms = Permutations::new(n, k);
+
+        let mut curr_perm = match perms.next() {
+            Some(p) => p,
+            None => { return; }
+        };
+
+        assert_eq!(expected_first, curr_perm);
+
+        while let Some(next_perm) = perms.next() {
+            assert!(next_perm > curr_perm);
+
+            curr_perm = next_perm;
+        }
+
+        assert_eq!(expected_last, curr_perm);
+
     }
 
     fn permutations_size(a: Iter<i32>, k: usize) -> bool {
