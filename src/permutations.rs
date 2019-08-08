@@ -28,7 +28,7 @@ enum PermutationState {
 }
 
 /// Functionality required to construct and iterate a
-/// [`Permutatations`](struct.Permutations.html) from a
+/// [`Permutations`](struct.Permutations.html) from a
 /// data source.
 pub trait PermutationSource {
     /// The type to be yielded, within a `Vec`, for each permutation.
@@ -182,7 +182,7 @@ impl PermutationState {
                     k: cycles.len()
                 }
             },
-            &mut PermutationState::Empty => { PermutationState::Empty },
+            &mut PermutationState::Empty => PermutationState::Empty,
         }
     }
 

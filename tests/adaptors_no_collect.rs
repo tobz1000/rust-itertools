@@ -24,7 +24,9 @@ impl Iterator for PanickingCounter {
     }
 }
 
-fn no_collect_test<A: Iterator, T: Fn(PanickingCounter) -> A>(to_adaptor: T) {
+fn no_collect_test<A, T>(to_adaptor: T)
+    where A: Iterator, T: Fn(PanickingCounter) -> A
+{
     let counter = PanickingCounter { curr: 0, max: 10_000 };
     let adaptor = to_adaptor(counter);
 
