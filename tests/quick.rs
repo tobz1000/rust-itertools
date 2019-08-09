@@ -18,7 +18,6 @@ use itertools::Itertools;
 use itertools::{
     multizip,
     EitherOrBoth,
-    Permutations
 };
 use itertools::free::{
     cloned,
@@ -678,7 +677,7 @@ quickcheck! {
         let expected_first: Vec<usize> = (0..k).collect();
         let expected_last: Vec<usize> = ((n - k)..n).rev().collect();
 
-        let mut perms = Permutations::new(n, k);
+        let mut perms = (0..n).permutations(k);
 
         let mut curr_perm = match perms.next() {
             Some(p) => p,
@@ -701,7 +700,7 @@ quickcheck! {
         correct_size_hint(a.take(5).permutations(k))
     }
 
-    fn permutations_k0_yields_one(n: usize) -> () {
+    fn permutations_k0_yields_once(n: usize) -> () {
         let k = 0;
         let expected: Vec<Vec<usize>> = vec![vec![]];
         let actual = (0..n).permutations(k).collect_vec();

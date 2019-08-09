@@ -1208,15 +1208,6 @@ pub trait Itertools : Iterator {
     /// are identical items in the input iterator, there will be some identical
     /// permutation iterations.
     ///
-    /// The original iterator is `collect`ed and stored in memory. As a result,
-    /// if the original iterator is already iterating over a memory structure,
-    /// it may be more efficient to use
-    /// [`Permutations::from_vals`](structs/struct.Permutations.html#method.from_vals).
-    ///
-    /// If the iterator is a simple range of the form `0..n`, it may be more
-    /// efficient to use
-    /// [`Permutations::new`](structs/struct.Permutations.html#method.new).
-    ///
     /// ```
     /// use itertools::Itertools;
     ///
@@ -1244,11 +1235,11 @@ pub trait Itertools : Iterator {
     /// ```
     ///
     #[cfg(feature = "use_std")]
-    fn permutations(self, k: usize) -> Permutations<Vec<Self::Item>>
+    fn permutations(self, k: usize) -> Permutations<Self>
         where Self: Sized,
               Self::Item: Clone
     {
-        Permutations::from_vals(self.collect(), k)
+        permutations::permutations(self, k)
     }
 
     /// Return an iterator adaptor that pads the sequence to a minimum length of
