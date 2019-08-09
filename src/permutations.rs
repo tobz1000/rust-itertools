@@ -162,25 +162,25 @@ impl PermutationState {
                 }
             },
             &mut PermutationState::Ongoing { ref mut cycles, ref mut indices } => {
-                for (i, c) in cycles.iter_mut().enumerate().rev() {
-                    if *c == 0 {
-                        *c = indices.len() - i - 1;
+                let n = indices.len();
+                let k = cycles.len();
+
+                for i in (0..k).rev() {
+                    if cycles[i] == 0 {
+                        cycles[i] = n - i - 1;
 
                         let to_push = indices.remove(i);
                         indices.push(to_push);
                     } else {
-                        let swap_index = indices.len() - *c;
+                        let swap_index = n - cycles[i];
                         indices.swap(i, swap_index);
 
-                        *c -= 1;
+                        cycles[i] -= 1;
                         return;
                     }
                 }
 
-                PermutationState::Stopped {
-                    n: indices.len(),
-                    k: cycles.len()
-                }
+                PermutationState::Stopped { n, k }
             },
             &mut PermutationState::Empty => PermutationState::Empty,
         }
