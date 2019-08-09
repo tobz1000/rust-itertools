@@ -42,3 +42,8 @@ fn permutations_no_collect() {
 fn combinations_no_collect() {
     no_collect_test(|iter| iter.combinations(5))
 }
+
+#[test]
+fn combinations_with_replacement_no_collect() {
+    no_collect_test(|iter| iter.combinations_with_replacement(5))
+}
