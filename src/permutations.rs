@@ -146,7 +146,7 @@ impl<S> Iterator for Permutations<S>
 
 impl PermutationState {
     fn new(n: usize, k: usize) -> PermutationState {
-        if n == 0 || k == 0 || k > n {
+        if k > n {
             PermutationState::Empty
         } else {
             PermutationState::Stopped { n: n, k: k }

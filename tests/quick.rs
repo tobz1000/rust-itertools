@@ -700,6 +700,14 @@ quickcheck! {
     fn permutations_size(a: Iter<i32>, k: usize) -> bool {
         correct_size_hint(a.take(5).permutations(k))
     }
+
+    fn permutations_k0_yields_one(n: usize) -> () {
+        let k = 0;
+        let expected: Vec<Vec<usize>> = vec![vec![]];
+        let actual = (0..n).permutations(k).collect_vec();
+
+        assert_eq!(expected, actual);
+    }
 }
 
 quickcheck! {
