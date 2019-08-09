@@ -1,6 +1,6 @@
 use std::ops::Index;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct LazyBuffer<I: Iterator> {
     it: I,
     done: bool,
@@ -8,7 +8,8 @@ pub struct LazyBuffer<I: Iterator> {
 }
 
 impl<I> LazyBuffer<I>
-    where I: Iterator
+where
+    I: Iterator,
 {
     pub fn new(it: I) -> LazyBuffer<I> {
         let mut it = it;
@@ -54,8 +55,9 @@ impl<I> LazyBuffer<I>
 }
 
 impl<I> Index<usize> for LazyBuffer<I>
-    where I: Iterator,
-          I::Item: Sized
+where
+    I: Iterator,
+    I::Item: Sized,
 {
     type Output = I::Item;
 
@@ -63,4 +65,3 @@ impl<I> Index<usize> for LazyBuffer<I>
         self.buffer.index(_index)
     }
 }
-

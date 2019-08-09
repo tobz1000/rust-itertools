@@ -1,6 +1,6 @@
 use std::fmt;
 
-use lazy_buffer::LazyBuffer;
+use super::lazy_buffer::LazyBuffer;
 
 /// An iterator to iterate through all the `k`-length combinations in an iterator.
 ///
