@@ -1167,6 +1167,34 @@ pub trait Itertools : Iterator {
         combinations::combinations(self, k)
     }
 
+    /// Return an iterator that iterates over the `n`-length combinations of
+    /// the elements from an iterator, with replacement.
+    ///
+    /// Iterator element type is `Vec<Self::Item>`. The iterator produces a new Vec per iteration,
+    /// and clones the iterator elements.
+    ///
+    /// ```
+    /// use itertools::Itertools;
+    ///
+    /// let it = (1..4).combinations_with_replacement(2);
+    /// itertools::assert_equal(it, vec![
+    ///     vec![1, 1],
+    ///     vec![1, 2],
+    ///     vec![1, 3],
+    ///     vec![2, 2],
+    ///     vec![2, 3],
+    ///     vec![3, 3],
+    ///     ]);
+    /// ```
+    #[cfg(feature = "use_std")]
+    fn combinations_with_replacement(self, n: usize) -> CombinationsWithReplacement<Self>
+    where
+        Self: Sized,
+        Self::Item: Clone,
+    {
+        combinations_with_replacement::combinations_with_replacement(self, n)
+    }
+
     /// Return an iterator adaptor that iterates over all k-permutations of the
     /// elements from an iterator.
     ///
@@ -1221,34 +1249,6 @@ pub trait Itertools : Iterator {
               Self::Item: Clone
     {
         Permutations::from_vals(self.collect(), k)
-    }
-
-    /// Return an iterator that iterates over the `n`-length combinations of
-    /// the elements from an iterator, with replacement.
-    ///
-    /// Iterator element type is `Vec<Self::Item>`. The iterator produces a new Vec per iteration,
-    /// and clones the iterator elements.
-    ///
-    /// ```
-    /// use itertools::Itertools;
-    ///
-    /// let it = (1..4).combinations_with_replacement(2);
-    /// itertools::assert_equal(it, vec![
-    ///     vec![1, 1],
-    ///     vec![1, 2],
-    ///     vec![1, 3],
-    ///     vec![2, 2],
-    ///     vec![2, 3],
-    ///     vec![3, 3],
-    ///     ]);
-    /// ```
-    #[cfg(feature = "use_std")]
-    fn combinations_with_replacement(self, n: usize) -> CombinationsWithReplacement<Self>
-    where
-        Self: Sized,
-        Self::Item: Clone,
-    {
-        combinations_with_replacement::combinations_with_replacement(self, n)
     }
 
     /// Return an iterator adaptor that pads the sequence to a minimum length of
