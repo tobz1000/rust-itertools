@@ -650,8 +650,8 @@ quickcheck! {
         for perm in perms {
             assert_eq!(perm.len(), k);
 
-            // Check that all items are valid
-            assert!(perm.iter().all(|p| vals.contains(p)));
+            let all_items_valid = perm.iter().all(|p| vals.contains(p));
+            assert!(all_items_valid, "perm contains value not from input: {:?}", perm);
 
             // Check that all perm items are distinct
             let distinct_len = {
@@ -661,7 +661,7 @@ quickcheck! {
             assert_eq!(perm.len(), distinct_len);
 
             // Check that the perm is new
-            assert!(actual.insert(perm));
+            assert!(actual.insert(perm.clone()), "perm already encountered: {:?}", perm);
         }
 
         assert_eq!(exp_len, actual.len());
@@ -687,7 +687,7 @@ quickcheck! {
         assert_eq!(expected_first, curr_perm);
 
         while let Some(next_perm) = perms.next() {
-            assert!(next_perm > curr_perm);
+            assert!(next_perm > curr_perm, "next perm isn't greater-than current; next_perm={:?} curr_perm={:?} n={}", next_perm, curr_perm, n);
 
             curr_perm = next_perm;
         }
