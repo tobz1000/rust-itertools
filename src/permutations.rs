@@ -25,6 +25,7 @@ enum PermutationState {
     },
     OngoingUnknownLen {
         k: usize,
+        min_n: usize,
     },
     Complete(CompleteState),
     Empty,
@@ -102,9 +103,8 @@ where
 
         match state {
             &PermutationState::StartUnknownLen { .. } => panic!("unexpected iterator state"),
-            &PermutationState::OngoingUnknownLen { k } => {
-                let latest_idx = vals.len() - 1;
-
+            &PermutationState::OngoingUnknownLen { k, min_n } => {
+                let latest_idx = min_n - 1;
                 let indices = (0..(k - 1)).chain(once(latest_idx));
 
                 Some(indices.map(|i| vals[i].clone()).collect())
@@ -132,9 +132,14 @@ where
         }
 
         match state {
-            PermutationState::StartUnknownLen { k } |
-            PermutationState::OngoingUnknownLen { k } => {
-                let prev_iteration_count = vals.len() - k + 1;
+            PermutationState::StartUnknownLen { k } => {
+                let n = vals.len() + vals.it.count();
+                let complete_state = CompleteState::Start { n, k };
+
+                from_complete(complete_state)
+            }
+            PermutationState::OngoingUnknownLen { k, min_n } => {
+                let prev_iteration_count = min_n - k + 1;
                 let n = vals.len() + vals.it.count();
                 let complete_state = CompleteState::Start { n, k };
 
@@ -168,13 +173,13 @@ where
 
         *state = match state {
             &mut PermutationState::StartUnknownLen { k } => {
-                PermutationState::OngoingUnknownLen { k }
+                PermutationState::OngoingUnknownLen { k, min_n: k }
             }
-            &mut PermutationState::OngoingUnknownLen { k } => {
+            &mut PermutationState::OngoingUnknownLen { k, min_n } => {
                 if vals.get_next() {
-                    return;
+                    PermutationState::OngoingUnknownLen { k, min_n: min_n + 1 }
                 } else {
-                    let n = vals.len();
+                    let n = min_n;
                     let prev_iteration_count = n - k + 1;
                     let mut complete_state = CompleteState::Start { n, k };
 
