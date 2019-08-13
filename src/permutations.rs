@@ -242,6 +242,10 @@ impl CompleteState {
 
         match self {
             &CompleteState::Start { n, k } => {
+                if n < k {
+                    return Known(0);
+                }
+
                 let count: Option<usize> = (n - k + 1..n + 1).fold(Some(1), |acc, i| {
                     acc.and_then(|acc| acc.checked_mul(i))
                 });
