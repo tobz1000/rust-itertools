@@ -249,6 +249,43 @@ impl<HK> qc::Arbitrary for ShiftRange<HK>
     }
 }
 
+fn correct_count<I, F>(get_it: F) -> bool
+where
+    I: Iterator,
+    F: Fn() -> I
+{
+    let mut counts = vec![get_it().count()];
+
+    'outer: loop {
+        let mut it = get_it();
+
+        for _ in 0..(counts.len() - 1) {
+            if let None = it.next() {
+                panic!("Iterator shouldn't be finished, may not be deterministic");
+            }
+        }
+
+        if let None = it.next() {
+            break 'outer;
+        }
+
+        counts.push(it.count());
+    }
+
+    let total_actual_count = counts.len() - 1;
+
+    for (i, returned_count) in counts.into_iter().enumerate() {
+        let actual_count = total_actual_count - i;
+        if actual_count != returned_count {
+            println!("Total iterations: {} True count: {} returned count: {}", i, actual_count, returned_count);
+
+            return false;
+        }
+    }
+
+    true
+}
+
 fn correct_size_hint<I: Iterator>(mut it: I) -> bool {
     // record size hint at each iteration
     let initial_hint = it.size_hint();
@@ -678,13 +715,23 @@ quickcheck! {
         assert_eq!(expected_first, curr_perm);
 
         while let Some(next_perm) = perms.next() {
-            assert!(next_perm > curr_perm, "next perm isn't greater-than current; next_perm={:?} curr_perm={:?} n={}", next_perm, curr_perm, n);
+            assert!(
+                next_perm > curr_perm,
+                "next perm isn't greater-than current; next_perm={:?} curr_perm={:?} n={}",
+                next_perm, curr_perm, n
+            );
 
             curr_perm = next_perm;
         }
 
         assert_eq!(expected_last, curr_perm);
 
+    }
+
+    fn permutations_count(n: usize, k: usize) -> bool {
+        let n = n % 6;
+
+        correct_count(|| (0..n).permutations(k))
     }
 
     fn permutations_size(a: Iter<i32>, k: usize) -> bool {

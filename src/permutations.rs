@@ -168,8 +168,6 @@ where
                     let prev_iteration_count = n - k + 1;
                     let mut complete_state = CompleteState::Start { n, k };
 
-                    println!("Advancing {}x; n={} k={}", prev_iteration_count, n, k);
-
                     // Advance the complete-state iterator to the correct point
                     for _ in 0..(prev_iteration_count + 1) {
                         complete_state.advance();
