@@ -11,7 +11,7 @@ use itertools::Permutations;
 
 use std::iter::repeat;
 use std::cmp;
-use std::ops::Add;
+use std::ops::{Add, Range};
 
 mod extra;
 
@@ -737,6 +737,25 @@ const PERM_COUNT: usize = 6;
 
 #[bench]
 fn permutations_iter(b: &mut test::Bencher) {
+    struct NewIterator(Range<usize>);
+
+    impl Iterator for NewIterator {
+        type Item = usize;
+
+        fn next(&mut self) -> Option<Self::Item> {
+            self.0.next()
+        }
+    }
+
+    b.iter(|| {
+        for _ in NewIterator(0..PERM_COUNT).permutations(PERM_COUNT) {
+
+        }
+    })
+}
+
+#[bench]
+fn permutations_range(b: &mut test::Bencher) {
     b.iter(|| {
         for _ in (0..PERM_COUNT).permutations(PERM_COUNT) {
 
@@ -745,20 +764,11 @@ fn permutations_iter(b: &mut test::Bencher) {
 }
 
 #[bench]
-fn permutations_ref(b: &mut test::Bencher) {
+fn permutations_slice(b: &mut test::Bencher) {
     let v = (0..PERM_COUNT).collect_vec();
 
     b.iter(|| {
-        for _ in Permutations::from_vals(v.as_slice(), PERM_COUNT) {
-
-        }
-    })
-}
-
-#[bench]
-fn permutations_indices(b: &mut test::Bencher) {
-    b.iter(|| {
-        for _ in Permutations::new(PERM_COUNT, PERM_COUNT) {
+        for _ in v.as_slice().iter().permutations(PERM_COUNT) {
 
         }
     })
