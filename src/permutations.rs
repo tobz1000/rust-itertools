@@ -125,10 +125,11 @@ where
         match state {
             PermutationState::StartUnknownLen { k } |
             PermutationState::OngoingUnknownLen { k } => {
+                let prev_iteration_count = vals.len() - k + 1;
                 let n = vals.len() + vals.it.count();
                 let complete_state = CompleteState::Start { n, k };
 
-                from_complete(complete_state)
+                from_complete(complete_state) - prev_iteration_count
             },
             PermutationState::Complete(state) => from_complete(state),
             PermutationState::Empty => 0
