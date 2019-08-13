@@ -1159,6 +1159,19 @@ pub trait Itertools : Iterator {
     ///     vec![2, 3, 4],
     /// ]);
     /// ```
+    ///
+    /// Note: Combinations does not take into account the equality of the iterated values.
+    ///
+    /// ```
+    /// use itertools::Itertools;
+    ///
+    /// let it = vec![1, 2, 2].into_iter().combinations(2);
+    /// itertools::assert_equal(it, vec![
+    ///     vec![1, 2],
+    ///     vec![1, 2],
+    ///     vec![2, 2],
+    /// ]);
+    /// ```
     #[cfg(feature = "use_std")]
     fn combinations(self, k: usize) -> Combinations<Self>
         where Self: Sized,
@@ -1167,7 +1180,7 @@ pub trait Itertools : Iterator {
         combinations::combinations(self, k)
     }
 
-    /// Return an iterator that iterates over the `n`-length combinations of
+    /// Return an iterator that iterates over the `k`-length combinations of
     /// the elements from an iterator, with replacement.
     ///
     /// Iterator element type is `Vec<Self::Item>`. The iterator produces a new Vec per iteration,
@@ -1184,15 +1197,15 @@ pub trait Itertools : Iterator {
     ///     vec![2, 2],
     ///     vec![2, 3],
     ///     vec![3, 3],
-    ///     ]);
+    /// ]);
     /// ```
     #[cfg(feature = "use_std")]
-    fn combinations_with_replacement(self, n: usize) -> CombinationsWithReplacement<Self>
+    fn combinations_with_replacement(self, k: usize) -> CombinationsWithReplacement<Self>
     where
         Self: Sized,
         Self::Item: Clone,
     {
-        combinations_with_replacement::combinations_with_replacement(self, n)
+        combinations_with_replacement::combinations_with_replacement(self, k)
     }
 
     /// Return an iterator adaptor that iterates over all k-permutations of the
@@ -1201,12 +1214,8 @@ pub trait Itertools : Iterator {
     /// Iterator element type is `Vec<Self::Item>` with length `k`. The iterator
     /// produces a new Vec per iteration, and clones the iterator elements.
     ///
-    /// If the input iterator is empty, or `k` greater than the length of the
+    /// If the input iterator is empty, or `k` is greater than the length of the
     /// input iterator, the resultant iterator adaptor will be empty.
-    ///
-    /// Source items are distinguished by their position, not value; so if there
-    /// are identical items in the input iterator, there will be some identical
-    /// permutation iterations.
     ///
     /// ```
     /// use itertools::Itertools;
@@ -1223,13 +1232,13 @@ pub trait Itertools : Iterator {
     /// ```
     ///
     /// Note: Permutations does not take into account the equality of the iterated values.
+    ///
     /// ```
     /// use itertools::Itertools;
     ///
-    /// let it = vec![1, 2, 2].into_iter().combinations(2);
+    /// let it = vec![2, 2].into_iter().permutations(2);
     /// itertools::assert_equal(it, vec![
-    ///     vec![1, 2], // Note: these are the same
-    ///     vec![1, 2], // Note: these are the same
+    ///     vec![2, 2],
     ///     vec![2, 2],
     /// ]);
     /// ```
