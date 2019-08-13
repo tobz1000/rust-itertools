@@ -638,13 +638,6 @@ quickcheck! {
 
         let perms = vals.iter().permutations(k);
 
-        // Hint should be exact. Returned size_hint value is not tested here.
-        let exp_len = {
-            let (lower, upper) = perms.size_hint();
-            assert_eq!(Some(lower), upper);
-            lower
-        };
-
         let mut actual = HashSet::new();
 
         for perm in perms {
@@ -663,8 +656,6 @@ quickcheck! {
             // Check that the perm is new
             assert!(actual.insert(perm.clone()), "perm already encountered: {:?}", perm);
         }
-
-        assert_eq!(exp_len, actual.len());
     }
 
     fn permutations_lexic_order(a: usize, b: usize) -> () {
