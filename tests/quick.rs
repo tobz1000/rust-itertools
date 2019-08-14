@@ -227,8 +227,8 @@ impl<HK> qc::Arbitrary for ShiftRange<HK>
     where HK: HintKind
 {
     fn arbitrary<G: qc::Gen>(g: &mut G) -> Self {
-        const MAX_STARTING_RANGE_DIFF: i32 = 32;
-        const MAX_STEP_MODULO: i32 = 8;
+        const MAX_STARTING_RANGE_DIFF: i32 = 8;
+        const MAX_STEP_MODULO: i32 = 2;
         const MAX_ITER_COUNT: u32 = 3;
 
         let range_start = qc::Arbitrary::arbitrary(g);
@@ -410,6 +410,9 @@ quickcheck! {
         assert_eq!(answer, actual);
     }
 
+    fn count_multi_product(a: ShiftRange) -> bool {
+        correct_count(a.multi_cartesian_product())
+    }
     fn size_multi_product(a: ShiftRange) -> bool {
         correct_size_hint(a.multi_cartesian_product())
     }
