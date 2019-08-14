@@ -249,27 +249,20 @@ impl<HK> qc::Arbitrary for ShiftRange<HK>
     }
 }
 
-fn correct_count<I, F>(get_it: F) -> bool
+fn correct_count<I>(mut it: I) -> bool
 where
-    I: Iterator,
-    F: Fn() -> I
+    I: Iterator + Clone
 {
-    let mut counts = vec![get_it().count()];
+    let mut counts = vec![it.clone().count()];
 
-    'outer: loop {
-        let mut it = get_it();
-
-        for _ in 0..(counts.len() - 1) {
-            if let None = it.next() {
-                panic!("Iterator shouldn't be finished, may not be deterministic");
-            }
-        }
-
+    loop {
         if let None = it.next() {
-            break 'outer;
+            break;
         }
 
-        counts.push(it.count());
+        counts.push(it.clone().count());
+
+        println!("{:?}", counts);
     }
 
     let total_actual_count = counts.len() - 1;
@@ -277,7 +270,7 @@ where
     for (i, returned_count) in counts.into_iter().enumerate() {
         let actual_count = total_actual_count - i;
         if actual_count != returned_count {
-            println!("Total iterations: {} True count: {} returned count: {}", i, actual_count, returned_count);
+            println!("Total iterations: {} true count: {} returned count: {}", i, actual_count, returned_count);
 
             return false;
         }
@@ -731,7 +724,7 @@ quickcheck! {
     fn permutations_count(n: usize, k: usize) -> bool {
         let n = n % 6;
 
-        correct_count(|| (0..n).permutations(k))
+        correct_count((0..n).permutations(k))
     }
 
     fn permutations_size(a: Iter<i32>, k: usize) -> bool {
