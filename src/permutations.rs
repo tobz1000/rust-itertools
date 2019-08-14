@@ -18,7 +18,7 @@ pub struct Permutations<I: Iterator> {
     state: PermutationState,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum PermutationState {
     StartUnknownLen {
         k: usize,
@@ -31,7 +31,7 @@ enum PermutationState {
     Empty,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum CompleteState {
     Start {
         n: usize,
@@ -48,9 +48,18 @@ enum CompleteStateRemaining {
     Overflow,
 }
 
+impl<I> Clone for Permutations<I>
+where
+    I: Iterator + Clone,
+    I::Item: Clone,
+{
+    clone_fields!(Permutations, vals, state);
+}
+
 impl<I> fmt::Debug for Permutations<I>
-    where I: Iterator + fmt::Debug,
-          I::Item: fmt::Debug,
+where
+    I: Iterator + fmt::Debug,
+    I::Item: fmt::Debug,
 {
     debug_fmt_fields!(Permutations, vals, state);
 }

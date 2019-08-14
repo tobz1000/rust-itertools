@@ -12,3 +12,15 @@ macro_rules! debug_fmt_fields {
         }
     }
 }
+
+macro_rules! clone_fields {
+    ($tyname:ident, $($field:ident),*) => {
+        fn clone(&self) -> Self {
+            $tyname {
+                $(
+                    $field: ::std::clone::Clone::clone(&self.$field),
+                )*
+            }
+        }
+    }
+}
