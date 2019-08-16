@@ -1214,8 +1214,8 @@ pub trait Itertools : Iterator {
     /// Iterator element type is `Vec<Self::Item>` with length `k`. The iterator
     /// produces a new Vec per iteration, and clones the iterator elements.
     ///
-    /// If the input iterator is empty, or `k` is greater than the length of the
-    /// input iterator, the resultant iterator adaptor will be empty.
+    /// If `k` is greater than the length of the input iterator, the resultant
+    /// iterator adaptor will be empty.
     ///
     /// ```
     /// use itertools::Itertools;
