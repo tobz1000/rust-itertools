@@ -733,6 +733,37 @@ fn cartesian_product_nested_for(b: &mut test::Bencher)
     })
 }
 
+#[bench]
+fn all_equal(b: &mut test::Bencher) {
+    let mut xs = vec![0; 5_000_000];
+    xs.extend(vec![1; 5_000_000]);
+
+    b.iter(|| xs.iter().all_equal())
+}
+
+#[bench]
+fn all_equal_for(b: &mut test::Bencher) {
+    let mut xs = vec![0; 5_000_000];
+    xs.extend(vec![1; 5_000_000]);
+
+    b.iter(|| {
+        for &x in &xs {
+            if x != xs[0] {
+                return false;
+            }
+        }
+        true
+    })
+}
+
+#[bench]
+fn all_equal_default(b: &mut test::Bencher) {
+    let mut xs = vec![0; 5_000_000];
+    xs.extend(vec![1; 5_000_000]);
+
+    b.iter(|| xs.iter().dedup().nth(1).is_none())
+}
+
 const PERM_COUNT: usize = 6;
 
 #[bench]
