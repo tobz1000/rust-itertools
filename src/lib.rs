@@ -1167,8 +1167,8 @@ pub trait Itertools : Iterator {
     ///
     /// let it = vec![1, 2, 2].into_iter().combinations(2);
     /// itertools::assert_equal(it, vec![
-    ///     vec![1, 2],
-    ///     vec![1, 2],
+    ///     vec![1, 2], // Note: these are the same
+    ///     vec![1, 2], // Note: these are the same
     ///     vec![2, 2],
     /// ]);
     /// ```
@@ -1238,8 +1238,8 @@ pub trait Itertools : Iterator {
     ///
     /// let it = vec![2, 2].into_iter().permutations(2);
     /// itertools::assert_equal(it, vec![
-    ///     vec![2, 2],
-    ///     vec![2, 2],
+    ///     vec![2, 2], // Note: these are the same
+    ///     vec![2, 2], // Note: these are the same
     /// ]);
     /// ```
     ///
