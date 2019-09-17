@@ -1145,9 +1145,6 @@ pub trait Itertools : Iterator {
     /// Iterator element type is `Vec<Self::Item>`. The iterator produces a new Vec per iteration,
     /// and clones the iterator elements.
     ///
-    /// If the input iterator is empty, or `k` is 0, or `k` greater than the
-    /// length of the input iterator, the resultant iterator adaptor will be empty.
-    ///
     /// ```
     /// use itertools::Itertools;
     ///
@@ -1243,6 +1240,8 @@ pub trait Itertools : Iterator {
     /// ]);
     /// ```
     ///
+    /// Note: The source iterator is collected lazily, and will not be
+    /// re-iterated if the permutations adaptor is completed and re-iterated.
     #[cfg(feature = "use_std")]
     fn permutations(self, k: usize) -> Permutations<Self>
         where Self: Sized,

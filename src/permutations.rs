@@ -3,15 +3,11 @@ use std::iter::once;
 
 use super::lazy_buffer::LazyBuffer;
 
-/// An iterator to iterate through all the `k`-permutations of a series of items.
+/// An iterator adaptor that iterates through all the `k`-permutations of the
+/// elements from an iterator.
 ///
-/// Source items are distinguished by their position, not value; so if there
-/// are identical items in the source, there will be some identical permutation
-/// iterations.
-///
-/// Can be constructed from an in-memory list of items directly; or from an
-/// iterator, with the
-/// [`.permuatations()`](../trait.Itertools.html#method.permutations) method.
+/// See [`.permutations()`](../trait.Itertools.html#method.permutations) for
+/// more information.
 #[must_use = "iterator adaptors are lazy and do nothing unless consumed"]
 pub struct Permutations<I: Iterator> {
     vals: LazyBuffer<I>,
