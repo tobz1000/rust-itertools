@@ -1,6 +1,7 @@
 #![warn(missing_docs)]
 #![crate_name="itertools"]
 #![cfg_attr(not(feature = "use_std"), no_std)]
+#![feature(specialization)]
 
 //! Extra iterator adaptors, functions and macros.
 //!
@@ -154,6 +155,8 @@ pub use sources::{repeat_call, unfold, iterate};
 pub use with_position::Position;
 pub use ziptuple::multizip;
 mod adaptors;
+#[cfg(feature = "use_std")]
+mod buffer;
 mod either_or_both;
 pub use either_or_both::EitherOrBoth;
 #[doc(hidden)]
