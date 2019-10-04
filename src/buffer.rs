@@ -1,7 +1,11 @@
 use std::ops::{Range, RangeFrom, RangeInclusive};
 
-pub trait IntoBuffer: Sized {
-    type Into: Buffer<Self>;
+pub trait IntoBuffer: Iterator + Sized {
+    type Into: Buffer<Self, Item = Self::Item>;
+
+    fn into_buffer(self) -> Self::Into {
+        Self::Into::from_source(self)
+    }
 }
 
 pub trait Buffer<Source> {

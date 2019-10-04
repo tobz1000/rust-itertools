@@ -3,26 +3,27 @@ use std::iter::once;
 
 use super::lazy_buffer::LazyBuffer;
 
+use crate::buffer::{Buffer, IntoBuffer};
+
 /// An iterator adaptor that iterates through all the `k`-permutations of the
 /// elements from an iterator.
 ///
 /// See [`.permutations()`](../trait.Itertools.html#method.permutations) for
 /// more information.
 #[must_use = "iterator adaptors are lazy and do nothing unless consumed"]
-pub struct Permutations<I: Iterator> {
-    vals: LazyBuffer<I>,
+pub struct Permutations<I>
+where
+    I: Iterator + IntoBuffer,
+    I::Item: Clone,
+{
+    vals: I::Into,
     state: PermutationState,
 }
 
 #[derive(Debug)]
 enum PermutationState {
-    StartUnknownLen {
-        k: usize,
-    },
-    OngoingUnknownLen {
-        k: usize,
-        min_n: usize,
-    },
+    StartUnknownLen { k: usize },
+    OngoingUnknownLen { k: usize, min_n: usize },
     Complete(CompleteState),
     Empty,
 }
@@ -36,7 +37,7 @@ enum CompleteState {
     Ongoing {
         indices: Vec<usize>,
         cycles: Vec<usize>,
-    }
+    },
 }
 
 enum CompleteStateRemaining {
@@ -44,136 +45,137 @@ enum CompleteStateRemaining {
     Overflow,
 }
 
-impl<I> fmt::Debug for Permutations<I>
-    where I: Iterator + fmt::Debug,
-          I::Item: fmt::Debug,
-{
-    debug_fmt_fields!(Permutations, vals, state);
-}
+// impl<I> fmt::Debug for Permutations<I>
+// where
+//     I: Iterator + fmt::Debug,
+//     I::Item: fmt::Debug,
+// {
+//     debug_fmt_fields!(Permutations, vals, state);
+// }
 
-pub fn permutations<I: Iterator>(iter: I, k: usize) -> Permutations<I> {
-    let mut vals = LazyBuffer::new(iter);
+pub fn permutations<I>(iter: I, k: usize) -> Permutations<I>
+where
+    I: Iterator + IntoBuffer,
+    I::Item: Clone,
+{
+    let mut vals = iter.into_buffer();
 
     if k == 0 {
         // Special case, yields single empty vec; `n` is irrelevant
         let state = PermutationState::Complete(CompleteState::Start { n: 0, k: 0 });
 
-        return Permutations {
-            vals,
-            state
-        };
+        return Permutations { vals, state };
     }
 
-    let mut enough_vals = true;
-
-    while vals.len() < k {
-        if !vals.get_next() {
-            enough_vals = false;
-            break;
-        }
-    }
-
-    let state = if enough_vals {
+    let state = if vals.get(k - 1).is_some() {
         PermutationState::StartUnknownLen { k }
     } else {
         PermutationState::Empty
     };
 
-    Permutations {
-        vals,
-        state
-    }
+    Permutations { vals, state }
 }
 
 impl<I> Iterator for Permutations<I>
 where
-    I: Iterator,
-    I::Item: Clone
+    I: Iterator + IntoBuffer,
+    I::Item: Clone,
 {
     type Item = Vec<I::Item>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.advance();
 
-        let &mut Permutations { ref vals, ref state } = self;
+        let Permutations { vals, state } = self;
 
         match state {
-            &PermutationState::StartUnknownLen { .. } => panic!("unexpected iterator state"),
-            &PermutationState::OngoingUnknownLen { k, min_n } => {
+            &mut PermutationState::StartUnknownLen { .. } => panic!("unexpected iterator state"),
+            &mut PermutationState::OngoingUnknownLen { k, min_n } => {
                 let latest_idx = min_n - 1;
                 let indices = (0..(k - 1)).chain(once(latest_idx));
 
-                Some(indices.map(|i| vals[i].clone()).collect())
+                Some(indices.map(|i| vals.get(i).unwrap()).collect())
             }
-            &PermutationState::Complete(CompleteState::Start { .. }) => None,
-            &PermutationState::Complete(CompleteState::Ongoing { ref indices, ref cycles }) => {
+            &mut PermutationState::Complete(CompleteState::Start { .. }) => None,
+            &mut PermutationState::Complete(CompleteState::Ongoing {
+                ref indices,
+                ref cycles,
+            }) => {
                 let k = cycles.len();
 
-                Some(indices[0..k].iter().map(|&i| vals[i].clone()).collect())
-            },
-            &PermutationState::Empty => None
+                Some(
+                    indices[0..k]
+                        .iter()
+                        .map(|&i| vals.get(i).unwrap())
+                        .collect(),
+                )
+            }
+            &mut PermutationState::Empty => None,
         }
     }
 
-    fn count(self) -> usize {
-        let Permutations { vals, state } = self;
+    // fn count(self) -> usize {
+    //     let Permutations { vals, state } = self;
 
-        fn from_complete(complete_state: CompleteState) -> usize {
-            match complete_state.remaining() {
-                CompleteStateRemaining::Known(count) => count,
-                CompleteStateRemaining::Overflow => {
-                    panic!("Iterator count greater than usize::MAX");
-                }
-            }
-        }
+    //     fn from_complete(complete_state: CompleteState) -> usize {
+    //         match complete_state.remaining() {
+    //             CompleteStateRemaining::Known(count) => count,
+    //             CompleteStateRemaining::Overflow => {
+    //                 panic!("Iterator count greater than usize::MAX");
+    //             }
+    //         }
+    //     }
 
-        match state {
-            PermutationState::StartUnknownLen { k } => {
-                let n = vals.len() + vals.it.count();
-                let complete_state = CompleteState::Start { n, k };
+    //     match state {
+    //         PermutationState::StartUnknownLen { k } => {
+    //             let n = vals.len() + vals.it.count();
+    //             let complete_state = CompleteState::Start { n, k };
 
-                from_complete(complete_state)
-            }
-            PermutationState::OngoingUnknownLen { k, min_n } => {
-                let prev_iteration_count = min_n - k + 1;
-                let n = vals.len() + vals.it.count();
-                let complete_state = CompleteState::Start { n, k };
+    //             from_complete(complete_state)
+    //         }
+    //         PermutationState::OngoingUnknownLen { k, min_n } => {
+    //             let prev_iteration_count = min_n - k + 1;
+    //             let n = vals.len() + vals.it.count();
+    //             let complete_state = CompleteState::Start { n, k };
 
-                from_complete(complete_state) - prev_iteration_count
-            },
-            PermutationState::Complete(state) => from_complete(state),
-            PermutationState::Empty => 0
-        }
-    }
+    //             from_complete(complete_state) - prev_iteration_count
+    //         }
+    //         PermutationState::Complete(state) => from_complete(state),
+    //         PermutationState::Empty => 0,
+    //     }
+    // }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
         match self.state {
-            PermutationState::StartUnknownLen { .. } |
-            PermutationState::OngoingUnknownLen { .. } => (0, None), // TODO can we improve this lower bound?
+            PermutationState::StartUnknownLen { .. }
+            | PermutationState::OngoingUnknownLen { .. } => (0, None), // TODO can we improve this lower bound?
             PermutationState::Complete(ref state) => match state.remaining() {
                 CompleteStateRemaining::Known(count) => (count, Some(count)),
-                CompleteStateRemaining::Overflow => (::std::usize::MAX, None)
-            }
-            PermutationState::Empty => (0, Some(0))
+                CompleteStateRemaining::Overflow => (::std::usize::MAX, None),
+            },
+            PermutationState::Empty => (0, Some(0)),
         }
     }
 }
 
 impl<I> Permutations<I>
 where
-    I: Iterator,
-    I::Item: Clone
+    I: Iterator + IntoBuffer,
+    I::Item: Clone,
 {
     fn advance(&mut self) {
-        let &mut Permutations { ref mut vals, ref mut state } = self;
+        let Permutations { vals, state } = self;
 
         *state = match state {
             &mut PermutationState::StartUnknownLen { k } => {
                 PermutationState::OngoingUnknownLen { k, min_n: k }
             }
             &mut PermutationState::OngoingUnknownLen { k, min_n } => {
-                if vals.get_next() {
-                    PermutationState::OngoingUnknownLen { k, min_n: min_n + 1 }
+                if vals.get(min_n).is_some() {
+                    PermutationState::OngoingUnknownLen {
+                        k,
+                        min_n: min_n + 1,
+                    }
                 } else {
                     let n = min_n;
                     let prev_iteration_count = n - k + 1;
@@ -192,7 +194,9 @@ where
 
                 return;
             }
-            &mut PermutationState::Empty => { return; }
+            &mut PermutationState::Empty => {
+                return;
+            }
         };
     }
 }
@@ -204,12 +208,12 @@ impl CompleteState {
                 let indices = (0..n).collect();
                 let cycles = ((n - k)..n).rev().collect();
 
-                CompleteState::Ongoing {
-                    cycles,
-                    indices
-                }
-            },
-            &mut CompleteState::Ongoing { ref mut indices, ref mut cycles } => {
+                CompleteState::Ongoing { cycles, indices }
+            }
+            &mut CompleteState::Ongoing {
+                ref mut indices,
+                ref mut cycles,
+            } => {
                 let n = indices.len();
                 let k = cycles.len();
 
@@ -242,26 +246,31 @@ impl CompleteState {
                     return Known(0);
                 }
 
-                let count: Option<usize> = (n - k + 1..n + 1).fold(Some(1), |acc, i| {
-                    acc.and_then(|acc| acc.checked_mul(i))
-                });
+                let count: Option<usize> = (n - k + 1..n + 1)
+                    .fold(Some(1), |acc, i| acc.and_then(|acc| acc.checked_mul(i)));
 
                 match count {
                     Some(count) => Known(count),
-                    None => Overflow
+                    None => Overflow,
                 }
             }
-            &CompleteState::Ongoing { ref indices, ref cycles } => {
+            &CompleteState::Ongoing {
+                ref indices,
+                ref cycles,
+            } => {
                 let mut count: usize = 0;
 
                 for (i, &c) in cycles.iter().enumerate() {
                     let radix = indices.len() - i;
-                    let next_count = count.checked_mul(radix)
+                    let next_count = count
+                        .checked_mul(radix)
                         .and_then(|count| count.checked_add(c));
 
                     count = match next_count {
                         Some(count) => count,
-                        None => { return Overflow; }
+                        None => {
+                            return Overflow;
+                        }
                     };
                 }
 

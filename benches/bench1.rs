@@ -1,16 +1,18 @@
 #![feature(test)]
+#![feature(specialization)]
 
 extern crate test;
-#[macro_use] extern crate itertools;
+#[macro_use]
+extern crate itertools;
 
-use test::{black_box};
 use itertools::Itertools;
+use test::black_box;
 
 use itertools::free::cloned;
 use itertools::Permutations;
 
-use std::iter::repeat;
 use std::cmp;
+use std::iter::repeat;
 use std::ops::{Add, Range};
 
 mod extra;
@@ -18,26 +20,27 @@ mod extra;
 use extra::ZipSlices;
 
 #[bench]
-fn slice_iter(b: &mut test::Bencher)
-{
+fn slice_iter(b: &mut test::Bencher) {
     let xs: Vec<_> = repeat(1i32).take(20).collect();
-    b.iter(|| for elt in xs.iter() {
-        test::black_box(elt);
+    b.iter(|| {
+        for elt in xs.iter() {
+            test::black_box(elt);
+        }
     })
 }
 
 #[bench]
-fn slice_iter_rev(b: &mut test::Bencher)
-{
+fn slice_iter_rev(b: &mut test::Bencher) {
     let xs: Vec<_> = repeat(1i32).take(20).collect();
-    b.iter(|| for elt in xs.iter().rev() {
-        test::black_box(elt);
+    b.iter(|| {
+        for elt in xs.iter().rev() {
+            test::black_box(elt);
+        }
     })
 }
 
 #[bench]
-fn zip_default_zip(b: &mut test::Bencher)
-{
+fn zip_default_zip(b: &mut test::Bencher) {
     let xs = vec![0; 1024];
     let ys = vec![0; 768];
     let xs = black_box(xs);
@@ -52,8 +55,7 @@ fn zip_default_zip(b: &mut test::Bencher)
 }
 
 #[bench]
-fn zipdot_i32_default_zip(b: &mut test::Bencher)
-{
+fn zipdot_i32_default_zip(b: &mut test::Bencher) {
     let xs = vec![2; 1024];
     let ys = vec![2; 768];
     let xs = black_box(xs);
@@ -69,8 +71,7 @@ fn zipdot_i32_default_zip(b: &mut test::Bencher)
 }
 
 #[bench]
-fn zipdot_f32_default_zip(b: &mut test::Bencher)
-{
+fn zipdot_f32_default_zip(b: &mut test::Bencher) {
     let xs = vec![2f32; 1024];
     let ys = vec![2f32; 768];
     let xs = black_box(xs);
@@ -86,8 +87,7 @@ fn zipdot_f32_default_zip(b: &mut test::Bencher)
 }
 
 #[bench]
-fn zip_default_zip3(b: &mut test::Bencher)
-{
+fn zip_default_zip3(b: &mut test::Bencher) {
     let xs = vec![0; 1024];
     let ys = vec![0; 768];
     let zs = vec![0; 766];
@@ -105,8 +105,7 @@ fn zip_default_zip3(b: &mut test::Bencher)
 }
 
 #[bench]
-fn zip_slices_ziptuple(b: &mut test::Bencher)
-{
+fn zip_slices_ziptuple(b: &mut test::Bencher) {
     let xs = vec![0; 1024];
     let ys = vec![0; 768];
 
@@ -121,8 +120,7 @@ fn zip_slices_ziptuple(b: &mut test::Bencher)
 }
 
 #[bench]
-fn zipslices(b: &mut test::Bencher)
-{
+fn zipslices(b: &mut test::Bencher) {
     let xs = vec![0; 1024];
     let ys = vec![0; 768];
     let xs = black_box(xs);
@@ -137,8 +135,7 @@ fn zipslices(b: &mut test::Bencher)
 }
 
 #[bench]
-fn zipslices_mut(b: &mut test::Bencher)
-{
+fn zipslices_mut(b: &mut test::Bencher) {
     let xs = vec![0; 1024];
     let ys = vec![0; 768];
     let xs = black_box(xs);
@@ -153,8 +150,7 @@ fn zipslices_mut(b: &mut test::Bencher)
 }
 
 #[bench]
-fn zipdot_i32_zipslices(b: &mut test::Bencher)
-{
+fn zipdot_i32_zipslices(b: &mut test::Bencher) {
     let xs = vec![2; 1024];
     let ys = vec![2; 768];
     let xs = black_box(xs);
@@ -170,8 +166,7 @@ fn zipdot_i32_zipslices(b: &mut test::Bencher)
 }
 
 #[bench]
-fn zipdot_f32_zipslices(b: &mut test::Bencher)
-{
+fn zipdot_f32_zipslices(b: &mut test::Bencher) {
     let xs = vec![2f32; 1024];
     let ys = vec![2f32; 768];
     let xs = black_box(xs);
@@ -186,10 +181,8 @@ fn zipdot_f32_zipslices(b: &mut test::Bencher)
     })
 }
 
-
 #[bench]
-fn zip_checked_counted_loop(b: &mut test::Bencher)
-{
+fn zip_checked_counted_loop(b: &mut test::Bencher) {
     let xs = vec![0; 1024];
     let ys = vec![0; 768];
     let xs = black_box(xs);
@@ -211,8 +204,7 @@ fn zip_checked_counted_loop(b: &mut test::Bencher)
 }
 
 #[bench]
-fn zipdot_i32_checked_counted_loop(b: &mut test::Bencher)
-{
+fn zipdot_i32_checked_counted_loop(b: &mut test::Bencher) {
     let xs = vec![2; 1024];
     let ys = vec![2; 768];
     let xs = black_box(xs);
@@ -234,8 +226,7 @@ fn zipdot_i32_checked_counted_loop(b: &mut test::Bencher)
 }
 
 #[bench]
-fn zipdot_f32_checked_counted_loop(b: &mut test::Bencher)
-{
+fn zipdot_f32_checked_counted_loop(b: &mut test::Bencher) {
     let xs = vec![2f32; 1024];
     let ys = vec![2f32; 768];
     let xs = black_box(xs);
@@ -257,8 +248,7 @@ fn zipdot_f32_checked_counted_loop(b: &mut test::Bencher)
 }
 
 #[bench]
-fn zipdot_f32_checked_counted_unrolled_loop(b: &mut test::Bencher)
-{
+fn zipdot_f32_checked_counted_unrolled_loop(b: &mut test::Bencher) {
     let xs = vec![2f32; 1024];
     let ys = vec![2f32; 768];
     let xs = black_box(xs);
@@ -302,8 +292,7 @@ fn zipdot_f32_checked_counted_unrolled_loop(b: &mut test::Bencher)
 }
 
 #[bench]
-fn zip_unchecked_counted_loop(b: &mut test::Bencher)
-{
+fn zip_unchecked_counted_loop(b: &mut test::Bencher) {
     let xs = vec![0; 1024];
     let ys = vec![0; 768];
     let xs = black_box(xs);
@@ -313,18 +302,17 @@ fn zip_unchecked_counted_loop(b: &mut test::Bencher)
         let len = cmp::min(xs.len(), ys.len());
         for i in 0..len {
             unsafe {
-            let x = *xs.get_unchecked(i);
-            let y = *ys.get_unchecked(i);
-            test::black_box(x);
-            test::black_box(y);
+                let x = *xs.get_unchecked(i);
+                let y = *ys.get_unchecked(i);
+                test::black_box(x);
+                test::black_box(y);
             }
         }
     })
 }
 
 #[bench]
-fn zipdot_i32_unchecked_counted_loop(b: &mut test::Bencher)
-{
+fn zipdot_i32_unchecked_counted_loop(b: &mut test::Bencher) {
     let xs = vec![2; 1024];
     let ys = vec![2; 768];
     let xs = black_box(xs);
@@ -335,9 +323,9 @@ fn zipdot_i32_unchecked_counted_loop(b: &mut test::Bencher)
         let mut s = 0i32;
         for i in 0..len {
             unsafe {
-            let x = *xs.get_unchecked(i);
-            let y = *ys.get_unchecked(i);
-            s += x * y;
+                let x = *xs.get_unchecked(i);
+                let y = *ys.get_unchecked(i);
+                s += x * y;
             }
         }
         s
@@ -345,8 +333,7 @@ fn zipdot_i32_unchecked_counted_loop(b: &mut test::Bencher)
 }
 
 #[bench]
-fn zipdot_f32_unchecked_counted_loop(b: &mut test::Bencher)
-{
+fn zipdot_f32_unchecked_counted_loop(b: &mut test::Bencher) {
     let xs = vec![2.; 1024];
     let ys = vec![2.; 768];
     let xs = black_box(xs);
@@ -357,9 +344,9 @@ fn zipdot_f32_unchecked_counted_loop(b: &mut test::Bencher)
         let mut s = 0f32;
         for i in 0..len {
             unsafe {
-            let x = *xs.get_unchecked(i);
-            let y = *ys.get_unchecked(i);
-            s += x * y;
+                let x = *xs.get_unchecked(i);
+                let y = *ys.get_unchecked(i);
+                s += x * y;
             }
         }
         s
@@ -367,8 +354,7 @@ fn zipdot_f32_unchecked_counted_loop(b: &mut test::Bencher)
 }
 
 #[bench]
-fn zip_unchecked_counted_loop3(b: &mut test::Bencher)
-{
+fn zip_unchecked_counted_loop3(b: &mut test::Bencher) {
     let xs = vec![0; 1024];
     let ys = vec![0; 768];
     let zs = vec![0; 766];
@@ -380,12 +366,12 @@ fn zip_unchecked_counted_loop3(b: &mut test::Bencher)
         let len = cmp::min(xs.len(), cmp::min(ys.len(), zs.len()));
         for i in 0..len {
             unsafe {
-            let x = *xs.get_unchecked(i);
-            let y = *ys.get_unchecked(i);
-            let z = *zs.get_unchecked(i);
-            test::black_box(x);
-            test::black_box(y);
-            test::black_box(z);
+                let x = *xs.get_unchecked(i);
+                let y = *ys.get_unchecked(i);
+                let z = *zs.get_unchecked(i);
+                test::black_box(x);
+                test::black_box(y);
+                test::black_box(z);
             }
         }
     })
@@ -465,9 +451,7 @@ fn equal(b: &mut test::Bencher) {
     let l = data.len();
     let alpha = test::black_box(&data[1..]);
     let beta = test::black_box(&data[..l - 1]);
-    b.iter(|| {
-        itertools::equal(alpha, beta)
-    })
+    b.iter(|| itertools::equal(alpha, beta))
 }
 
 #[bench]
@@ -491,9 +475,7 @@ fn merge_default(b: &mut test::Bencher) {
     }
     let data1 = test::black_box(data1);
     let data2 = test::black_box(data2);
-    b.iter(|| {
-        data1.iter().merge(&data2).count()
-    })
+    b.iter(|| data1.iter().merge(&data2).count())
 }
 
 #[bench]
@@ -517,9 +499,7 @@ fn merge_by_cmp(b: &mut test::Bencher) {
     }
     let data1 = test::black_box(data1);
     let data2 = test::black_box(data2);
-    b.iter(|| {
-        data1.iter().merge_by(&data2, PartialOrd::le).count()
-    })
+    b.iter(|| data1.iter().merge_by(&data2, PartialOrd::le).count())
 }
 
 #[bench]
@@ -543,9 +523,7 @@ fn merge_by_lt(b: &mut test::Bencher) {
     }
     let data1 = test::black_box(data1);
     let data2 = test::black_box(data2);
-    b.iter(|| {
-        data1.iter().merge_by(&data2, |a, b| a <= b).count()
-    })
+    b.iter(|| data1.iter().merge_by(&data2, |a, b| a <= b).count())
 }
 
 #[bench]
@@ -570,9 +548,7 @@ fn kmerge_default(b: &mut test::Bencher) {
     let data1 = test::black_box(data1);
     let data2 = test::black_box(data2);
     let its = &[data1.iter(), data2.iter()];
-    b.iter(|| {
-        its.iter().cloned().kmerge().count()
-    })
+    b.iter(|| its.iter().cloned().kmerge().count())
 }
 
 #[bench]
@@ -595,7 +571,7 @@ fn kmerge_tenway(b: &mut test::Bencher) {
     while rest.len() > 0 {
         let chunk_len = 1 + rng(&mut state) % 512;
         let chunk_len = cmp::min(rest.len(), chunk_len as usize);
-        let (fst, tail) = {rest}.split_at_mut(chunk_len);
+        let (fst, tail) = { rest }.split_at_mut(chunk_len);
         fst.sort();
         chunks.push(fst.iter().cloned());
         rest = tail;
@@ -603,55 +579,43 @@ fn kmerge_tenway(b: &mut test::Bencher) {
 
     // println!("Chunk lengths: {}", chunks.iter().format_with(", ", |elt, f| f(&elt.len())));
 
-    b.iter(|| {
-        chunks.iter().cloned().kmerge().count()
-    })
+    b.iter(|| chunks.iter().cloned().kmerge().count())
 }
 
-
 fn fast_integer_sum<I>(iter: I) -> I::Item
-    where I: IntoIterator,
-          I::Item: Default + Add<Output=I::Item>
+where
+    I: IntoIterator,
+    I::Item: Default + Add<Output = I::Item>,
 {
     iter.into_iter().fold(<_>::default(), |x, y| x + y)
 }
 
-
 #[bench]
 fn step_vec_2(b: &mut test::Bencher) {
     let v = vec![0; 1024];
-    b.iter(|| {
-        fast_integer_sum(cloned(v.iter().step(2)))
-    });
+    b.iter(|| fast_integer_sum(cloned(v.iter().step(2))));
 }
 
 #[bench]
 fn step_vec_10(b: &mut test::Bencher) {
     let v = vec![0; 1024];
-    b.iter(|| {
-        fast_integer_sum(cloned(v.iter().step(10)))
-    });
+    b.iter(|| fast_integer_sum(cloned(v.iter().step(10))));
 }
 
 #[bench]
 fn step_range_2(b: &mut test::Bencher) {
     let v = black_box(0..1024);
-    b.iter(|| {
-        fast_integer_sum(v.clone().step(2))
-    });
+    b.iter(|| fast_integer_sum(v.clone().step(2)));
 }
 
 #[bench]
 fn step_range_10(b: &mut test::Bencher) {
     let v = black_box(0..1024);
-    b.iter(|| {
-        fast_integer_sum(v.clone().step(10))
-    });
+    b.iter(|| fast_integer_sum(v.clone().step(10)));
 }
 
 #[bench]
-fn cartesian_product_iterator(b: &mut test::Bencher)
-{
+fn cartesian_product_iterator(b: &mut test::Bencher) {
     let xs = vec![0; 16];
 
     b.iter(|| {
@@ -666,8 +630,7 @@ fn cartesian_product_iterator(b: &mut test::Bencher)
 }
 
 #[bench]
-fn cartesian_product_fold(b: &mut test::Bencher)
-{
+fn cartesian_product_fold(b: &mut test::Bencher) {
     let xs = vec![0; 16];
 
     b.iter(|| {
@@ -682,8 +645,7 @@ fn cartesian_product_fold(b: &mut test::Bencher)
 }
 
 #[bench]
-fn multi_cartesian_product_iterator(b: &mut test::Bencher)
-{
+fn multi_cartesian_product_iterator(b: &mut test::Bencher) {
     let xs = [vec![0; 16], vec![0; 16], vec![0; 16]];
 
     b.iter(|| {
@@ -698,8 +660,7 @@ fn multi_cartesian_product_iterator(b: &mut test::Bencher)
 }
 
 #[bench]
-fn multi_cartesian_product_fold(b: &mut test::Bencher)
-{
+fn multi_cartesian_product_fold(b: &mut test::Bencher) {
     let xs = [vec![0; 16], vec![0; 16], vec![0; 16]];
 
     b.iter(|| {
@@ -714,8 +675,7 @@ fn multi_cartesian_product_fold(b: &mut test::Bencher)
 }
 
 #[bench]
-fn cartesian_product_nested_for(b: &mut test::Bencher)
-{
+fn cartesian_product_nested_for(b: &mut test::Bencher) {
     let xs = vec![0; 16];
 
     b.iter(|| {
@@ -764,7 +724,8 @@ fn all_equal_default(b: &mut test::Bencher) {
     b.iter(|| xs.iter().dedup().nth(1).is_none())
 }
 
-const PERM_COUNT: usize = 6;
+const N: usize = 100;
+const K: usize = 4;
 
 #[bench]
 fn permutations_iter(b: &mut test::Bencher) {
@@ -778,9 +739,11 @@ fn permutations_iter(b: &mut test::Bencher) {
         }
     }
 
-    b.iter(|| {
-        for _ in NewIterator(0..PERM_COUNT).permutations(PERM_COUNT) {
+    impl itertools::IntoBuffer for NewIterator {}
 
+    b.iter(|| {
+        for i in NewIterator(0..N).permutations(K).take(N / 2) {
+            // println!("{:?}", i);
         }
     })
 }
@@ -788,19 +751,19 @@ fn permutations_iter(b: &mut test::Bencher) {
 #[bench]
 fn permutations_range(b: &mut test::Bencher) {
     b.iter(|| {
-        for _ in (0..PERM_COUNT).permutations(PERM_COUNT) {
-
+        for i in (0..N).permutations(K).take(N / 2) {
+            // println!("{:?}", i);
         }
     })
 }
 
 #[bench]
 fn permutations_slice(b: &mut test::Bencher) {
-    let v = (0..PERM_COUNT).collect_vec();
+    let v = (0..N).collect_vec();
 
     b.iter(|| {
-        for _ in v.as_slice().iter().permutations(PERM_COUNT) {
-
+        for i in v.as_slice().iter().permutations(K).take(N / 2) {
+            // println!("{:?}", i);
         }
     })
 }
